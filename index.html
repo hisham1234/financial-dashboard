@@ -155,13 +155,29 @@
             }
             
             console.log('✅ Both services initialized, proceeding with connection...');
+            console.log('📋 Client ID:', GOOGLE_CLIENT_ID);
+            console.log('📋 Scopes:', SCOPES);
             
             tokenClient.callback = async (resp) => {
+                console.log('🔐 Auth callback received:', resp);
+                
                 if (resp.error !== undefined) {
-                    console.error('Auth error:', resp);
+                    console.error('❌ Auth error:', resp);
+                    console.error('   Error type:', resp.error);
+                    console.error('   Error description:', resp.error_description);
+                    
+                    let errorMsg = '⚠️ Authentication failed: ' + resp.error;
+                    if (resp.error_description) {
+                        errorMsg += '\n\n' + resp.error_description;
+                    }
+                    
+                    alert(errorMsg);
                     if (window.app) window.app.msg('⚠️ Failed to connect to Google Drive', true);
                     return;
                 }
+                
+                console.log('✅ Authentication successful!');
+                console.log('   Access token received:', resp.access_token ? 'Yes' : 'No');
                 
                 // Save token for auto-connect
                 localStorage.setItem('gdrive_access_token', resp.access_token);
@@ -189,10 +205,18 @@
                 enableAutoRefresh();
             };
             
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
+            try {
+                console.log('🚀 Requesting access token...');
+                if (gapi.client.getToken() === null) {
+                    console.log('   Using consent prompt (first time)');
+                    tokenClient.requestAccessToken({prompt: 'consent'});
+                } else {
+                    console.log('   Using existing token');
+                    tokenClient.requestAccessToken({prompt: ''});
+                }
+            } catch (err) {
+                console.error('❌ Error requesting access token:', err);
+                alert('Error starting authentication: ' + err.message);
             }
         }
         
