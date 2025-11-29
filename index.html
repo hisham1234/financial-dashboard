@@ -4,6 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
         <title>Advanced Financial Dashboard</title>
         
         <!-- ADD THESE GOOGLE DRIVE SCRIPTS -->
@@ -13,11 +14,29 @@
         <script>
         // Filter out Google API COOP warnings (harmless, known issue)
         const originalWarn = console.warn;
+        const originalError = console.error;
+        const originalLog = console.log;
+        
+        const shouldSuppress = (arg) => {
+            return arg && typeof arg === 'string' && 
+                   (arg.includes('Cross-Origin-Opener-Policy') || 
+                    arg.includes('window.opener') ||
+                    arg.includes('gapi.loaded'));
+        };
+        
         console.warn = function(...args) {
-            if (args[0] && typeof args[0] === 'string' && args[0].includes('Cross-Origin-Opener-Policy')) {
-                return; // Suppress COOP warnings
-            }
+            if (shouldSuppress(args[0])) return;
             originalWarn.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            if (shouldSuppress(args[0])) return;
+            originalError.apply(console, args);
+        };
+        
+        console.log = function(...args) {
+            if (shouldSuppress(args[0])) return;
+            originalLog.apply(console, args);
         };
         
         // ==================== GOOGLE DRIVE CONFIGURATION ====================
