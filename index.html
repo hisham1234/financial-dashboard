@@ -188,7 +188,7 @@
         // Save to Google Drive
         async function saveToGoogleDrive() {
             if (!gapi.client.getToken()) {
-                console.log('Not connected to Drive, skipping save');
+                console.log('Not connected to Drive, data only in cache');
                 return;
             }
             
@@ -216,9 +216,13 @@
                         params: {uploadType: 'media'},
                         body: data
                     });
-                    console.log('✅ Updated in Google Drive');
+                    console.log('✅ Synced to Google Drive');
                     lastSyncTime = Date.now();
                     updateSigninStatus();
+                    
+                    // Update syncStatus to show Drive sync
+                    document.getElementById('syncStatus').textContent = 'Synced ' + new Date().toLocaleTimeString();
+                    document.getElementById('syncStatus').style.color = '';
                 } else {
                     // Create new file
                     const metadata = {
@@ -245,10 +249,15 @@
                     lastSyncTime = Date.now();
                     updateSigninStatus();
                     if (window.app) window.app.msg('✅ Created backup in Google Drive');
+                    
+                    document.getElementById('syncStatus').textContent = 'Synced ' + new Date().toLocaleTimeString();
+                    document.getElementById('syncStatus').style.color = '';
                 }
             } catch (err) {
                 console.error('Google Drive save error:', err);
                 if (window.app) window.app.msg('⚠️ Failed to sync to Google Drive', true);
+                document.getElementById('syncStatus').textContent = '⚠️ Sync failed!';
+                document.getElementById('syncStatus').style.color = '#e74c3c';
             }
         }
         
@@ -292,7 +301,18 @@
                 }
                 
                 window.app.render();
-                window.app.saveData();
+                
+                // Save to localStorage as cache (but mark it as from Drive, not cache-only)
+                localStorage.setItem('financial-dashboard-v15', JSON.stringify({
+                    data: window.app.data,
+                    categories: window.app.categories,
+                    customAccounts: window.app.customAccounts,
+                    version: '15',
+                    lastSaved: new Date().toISOString(),
+                    isCacheOnly: false, // This came from Drive, so it's trusted
+                    loadedFromDrive: true
+                }));
+                
                 window.app.msg('✅ Loaded latest data from Drive (Last saved: ' + new Date(imported.lastSaved).toLocaleString() + ')');
                 
                 lastSyncTime = Date.now();
@@ -356,7 +376,18 @@
                 }
                 
                 window.app.render();
-                window.app.saveData();
+                
+                // Save to localStorage as cache (but mark it as from Drive, not cache-only)
+                localStorage.setItem('financial-dashboard-v15', JSON.stringify({
+                    data: window.app.data,
+                    categories: window.app.categories,
+                    customAccounts: window.app.customAccounts,
+                    version: '15',
+                    lastSaved: new Date().toISOString(),
+                    isCacheOnly: false, // This came from Drive, so it's trusted
+                    loadedFromDrive: true
+                }));
+                
                 console.log('✅ Auto-loaded from Google Drive successfully!');
                 
                 // Show user notification
@@ -394,14 +425,31 @@
         
         // Debug status (for troubleshooting)
         function showDriveStatus() {
+            const cached = localStorage.getItem('financial-dashboard-v15');
+            let cacheStatus = 'None';
+            let cacheOnlyFlag = 'Unknown';
+            
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    cacheOnlyFlag = parsed.isCacheOnly ? 'Cache-only (not from Drive)' : 'From Drive (trusted)';
+                    cacheStatus = 'Present (' + (parsed.isCacheOnly ? '⚠️ not synced' : '✅ synced') + ')';
+                } catch(e) {
+                    cacheStatus = 'Corrupted';
+                }
+            }
+            
             const status = {
+                'Mode': '🌩️ Drive-First Architecture',
                 'GAPI Initialized': gapiInited,
                 'GIS Initialized': gisInited,
                 'Connected': gapi && gapi.client && gapi.client.getToken() !== null,
                 'File ID': localStorage.getItem('gdrive_file_id') || 'None',
                 'Access Token': localStorage.getItem('gdrive_access_token') ? 'Present' : 'None',
                 'App Ready': !!window.app,
-                'Last Sync': lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Never'
+                'Last Sync': lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Never',
+                'Cache Status': cacheStatus,
+                'Cache Type': cacheOnlyFlag
             };
             
             console.log('=== Google Drive Status ===');
@@ -409,20 +457,20 @@
                 console.log(key + ':', status[key]);
             }
             
-            alert('Drive Status:\n\n' + Object.entries(status).map(([k,v]) => k + ': ' + v).join('\n'));
+            alert('Drive-First Status:\n\n' + Object.entries(status).map(([k,v]) => k + ': ' + v).join('\n') + '\n\n💡 Drive is the source of truth.\nLocalStorage is cache only.');
         }
         
-        // Auto-save functionality
+        // Auto-save functionality (less frequent since we sync immediately on changes)
         function enableAutoSync() {
-            // Auto-sync every 2 minutes
+            // Backup sync every 5 minutes (in case immediate sync failed)
             if (autoSyncInterval) clearInterval(autoSyncInterval);
             autoSyncInterval = setInterval(() => {
                 if (gapi && gapi.client && gapi.client.getToken() !== null) {
-                    console.log('🔄 Auto-syncing to Google Drive...');
+                    console.log('🔄 Backup sync to Google Drive...');
                     saveToGoogleDrive();
                 }
-            }, 2 * 60 * 1000);
-            console.log('✅ Auto-sync enabled (every 2 minutes)');
+            }, 5 * 60 * 1000);
+            console.log('✅ Backup auto-sync enabled (every 5 minutes)');
         }
         
         // Auto-refresh from Drive (check for updates from other devices)
@@ -970,6 +1018,9 @@
     <div class="container">
         <h1>💰 Advanced Financial Dashboard</h1>
         <p class="subtitle">Complete Multi-Account Management with Transfer History</p>
+        <p style="text-align:center;font-size:11px;color:#7f8c8d;margin:-5px 0 10px 0;">
+            🌩️ <strong>Drive-First Mode:</strong> All data syncs to Google Drive instantly
+        </p>
         
         <div class="assets-banner">
             <div class="assets-label">💎 TOTAL ASSETS ACROSS ALL ACCOUNTS</div>
@@ -1321,6 +1372,13 @@
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
+                        
+                        // Check if this is cache-only data (not from Drive)
+                        if (parsed.isCacheOnly) {
+                            console.warn('⚠️ Loading from CACHE - Drive is the source of truth');
+                            this.msg('⚠️ Loaded cached data. Connecting to Drive for latest...', true);
+                        }
+                        
                         if (parsed.data) {
                             this.data = parsed.data;
                             // Ensure all months have proper structure
@@ -1330,10 +1388,17 @@
                         }
                         if (parsed.categories) this.categories = parsed.categories;
                         if (parsed.customAccounts) this.customAccounts = parsed.customAccounts;
-                        this.msg('✅ Data loaded');
+                        
+                        // Show different message based on cache status
+                        if (!parsed.isCacheOnly) {
+                            this.msg('✅ Data loaded from cache');
+                        }
                     } catch(e) {
                         this.msg('⚠️ Failed to load data', true);
                     }
+                } else {
+                    console.log('No cached data found - will load from Drive when connected');
+                    this.msg('ℹ️ No local data. Connect to Drive to load your data.');
                 }
             },
 
@@ -1383,20 +1448,26 @@
                     // Before saving, update all dependent months
                     this.updateDependentMonths();
                     
+                    // Save to localStorage as CACHE ONLY (not source of truth)
                     localStorage.setItem('financial-dashboard-v15', JSON.stringify({
                         data: this.data,
                         categories: this.categories,
                         customAccounts: this.customAccounts,
                         version: '15',
-                        lastSaved: new Date().toISOString()
+                        lastSaved: new Date().toISOString(),
+                        isCacheOnly: true // Mark this as cache, not source of truth
                     }));
-                    document.getElementById('syncStatus').textContent = 'Saved ' + new Date().toLocaleTimeString();
+                    document.getElementById('syncStatus').textContent = 'Cached ' + new Date().toLocaleTimeString();
                     
-                    // Auto-sync to Google Drive if connected
+                    // IMMEDIATELY sync to Google Drive (source of truth)
                     if (typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken && gapi.client.getToken() !== null) {
-                        setTimeout(() => {
-                            saveToGoogleDrive();
-                        }, 500);
+                        // Save to Drive immediately (not delayed)
+                        saveToGoogleDrive();
+                    } else {
+                        // Show warning if not connected to Drive
+                        console.warn('⚠️ Not connected to Drive - data only in cache!');
+                        document.getElementById('syncStatus').textContent = '⚠️ Cache only - Connect to Drive!';
+                        document.getElementById('syncStatus').style.color = '#f39c12';
                     }
                 } catch(e) {
                     this.msg('⚠️ Failed to save', true);
