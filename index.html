@@ -20,6 +20,9 @@
         let gapiInited = false;
         let gisInited = false;
         let driveFileId = null;
+        let lastSyncTime = null;
+        let autoSyncInterval = null;
+        let autoRefreshInterval = null;
         
         // Initialize Google API
         function gapiLoaded() {
@@ -37,6 +40,9 @@
                 gapiInited = true;
                 console.log('✅ GAPI initialized successfully! gapiInited =', gapiInited);
                 updateSigninStatus();
+                
+                // Try to auto-connect if token exists
+                setTimeout(() => tryAutoConnect(), 1000);
             } catch (err) {
                 console.error('❌ GAPI initialization error:', err);
             }
@@ -58,16 +64,53 @@
             }
         }
         
+        // Try to auto-connect on page load
+        async function tryAutoConnect() {
+            const savedToken = localStorage.getItem('gdrive_access_token');
+            if (savedToken && gapiInited) {
+                try {
+                    gapi.client.setToken({ access_token: savedToken });
+                    console.log('🔄 Auto-connected with saved token');
+                    updateSigninStatus();
+                    
+                    // Auto-load from Drive on startup
+                    await autoLoadFromDrive();
+                    
+                    // Start auto-sync and auto-refresh
+                    enableAutoSync();
+                    enableAutoRefresh();
+                } catch (err) {
+                    console.log('❌ Auto-connect failed, token may be expired');
+                    localStorage.removeItem('gdrive_access_token');
+                }
+            }
+        }
+        
         function updateSigninStatus() {
             const token = gapi.client.getToken();
             const statusEl = document.getElementById('driveStatus');
+            const lastSyncEl = document.getElementById('lastSyncTime');
+            
             if (statusEl) {
                 if (token) {
                     statusEl.textContent = '🟢 Connected';
                     statusEl.style.color = '#43e97b';
+                    
+                    // Show last sync time if available
+                    if (lastSyncEl && lastSyncTime) {
+                        const timeDiff = Math.floor((Date.now() - lastSyncTime) / 1000);
+                        if (timeDiff < 60) {
+                            lastSyncEl.textContent = 'Synced: ' + timeDiff + 's ago';
+                        } else if (timeDiff < 3600) {
+                            lastSyncEl.textContent = 'Synced: ' + Math.floor(timeDiff / 60) + 'm ago';
+                        } else {
+                            lastSyncEl.textContent = 'Synced: ' + new Date(lastSyncTime).toLocaleTimeString();
+                        }
+                    }
                 } else {
                     statusEl.textContent = '⚪ Not connected';
                     statusEl.style.color = '#999';
+                    if (lastSyncEl) lastSyncEl.textContent = '';
                 }
             }
         }
@@ -91,14 +134,26 @@
                     if (window.app) window.app.msg('⚠️ Failed to connect to Google Drive', true);
                     return;
                 }
+                
+                // Save token for auto-connect
+                localStorage.setItem('gdrive_access_token', resp.access_token);
+                
                 updateSigninStatus();
                 if (window.app) window.app.msg('✅ Connected to Google Drive');
                 
                 // Load file ID from localStorage
                 driveFileId = localStorage.getItem('gdrive_file_id');
                 
-                // Auto-save current data
-                await saveToGoogleDrive();
+                // Auto-load from Drive if file exists, otherwise save current data
+                if (driveFileId) {
+                    await autoLoadFromDrive();
+                } else {
+                    await saveToGoogleDrive();
+                }
+                
+                // Enable auto-sync and auto-refresh
+                enableAutoSync();
+                enableAutoRefresh();
             };
             
             if (gapi.client.getToken() === null) {
@@ -114,6 +169,12 @@
             if (token !== null) {
                 google.accounts.oauth2.revoke(token.access_token);
                 gapi.client.setToken('');
+                localStorage.removeItem('gdrive_access_token');
+                
+                // Stop auto-sync and auto-refresh
+                if (autoSyncInterval) clearInterval(autoSyncInterval);
+                if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                
                 updateSigninStatus();
                 if (window.app) window.app.msg('✅ Disconnected from Google Drive');
             }
@@ -122,7 +183,7 @@
         // Save to Google Drive
         async function saveToGoogleDrive() {
             if (!gapi.client.getToken()) {
-                if (window.app) window.app.msg('⚠️ Please connect to Google Drive first', true);
+                console.log('Not connected to Drive, skipping save');
                 return;
             }
             
@@ -151,7 +212,8 @@
                         body: data
                     });
                     console.log('✅ Updated in Google Drive');
-                    if (window.app) window.app.msg('✅ Synced to Google Drive');
+                    lastSyncTime = Date.now();
+                    updateSigninStatus();
                 } else {
                     // Create new file
                     const metadata = {
@@ -175,6 +237,8 @@
                     localStorage.setItem('gdrive_file_id', result.id);
                     driveFileId = result.id;
                     console.log('✅ Created new file in Google Drive:', result.id);
+                    lastSyncTime = Date.now();
+                    updateSigninStatus();
                     if (window.app) window.app.msg('✅ Created backup in Google Drive');
                 }
             } catch (err) {
@@ -222,6 +286,9 @@
                 window.app.render();
                 window.app.saveData();
                 window.app.msg('✅ Loaded from Google Drive');
+                
+                lastSyncTime = Date.now();
+                updateSigninStatus();
             } catch (err) {
                 console.error('Google Drive load error:', err);
                 if (err.status === 404) {
@@ -233,25 +300,119 @@
             }
         }
         
-        // Auto-save functionality
-        let autoSaveInterval;
-        function enableAutoSync() {
-            // Auto-sync every 5 minutes
-            if (autoSaveInterval) clearInterval(autoSaveInterval);
-            autoSaveInterval = setInterval(() => {
-                if (gapi && gapi.client && gapi.client.getToken() !== null) {
-                    console.log('Auto-syncing to Google Drive...');
-                    saveToGoogleDrive();
+        // Auto-load from Drive (silent, no user notification)
+        async function autoLoadFromDrive() {
+            if (!gapi.client.getToken()) {
+                console.log('Not connected to Drive, skipping auto-load');
+                return;
+            }
+            
+            const fileId = localStorage.getItem('gdrive_file_id');
+            
+            if (!fileId) {
+                console.log('No Drive file ID found, skipping auto-load');
+                return;
+            }
+            
+            try {
+                console.log('🔄 Auto-loading from Google Drive...');
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+                
+                const imported = JSON.parse(response.body);
+                
+                if (!window.app) {
+                    console.log('App not ready yet, will retry');
+                    setTimeout(() => autoLoadFromDrive(), 2000);
+                    return;
                 }
-            }, 5 * 60 * 1000);
+                
+                if (imported.data) window.app.data = imported.data;
+                if (imported.categories) window.app.categories = imported.categories;
+                if (imported.customAccounts) window.app.customAccounts = imported.customAccounts;
+                
+                // Validate all month structures
+                for (let monthKey in window.app.data) {
+                    window.app.validateMonthStructure(monthKey);
+                }
+                
+                window.app.render();
+                window.app.saveData();
+                console.log('✅ Auto-loaded from Google Drive');
+                
+                lastSyncTime = Date.now();
+                updateSigninStatus();
+            } catch (err) {
+                console.error('Auto-load error:', err);
+                if (err.status === 404) {
+                    localStorage.removeItem('gdrive_file_id');
+                    console.log('Drive file not found');
+                }
+            }
         }
         
-        // Start auto-sync when page loads
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                enableAutoSync();
-            }, 3000);
-        });
+        // Refresh from Drive (checks for updates from other devices)
+        async function refreshFromDrive() {
+            if (!window.app) {
+                window.app.msg('⚠️ App not ready', true);
+                return;
+            }
+            
+            window.app.msg('🔄 Checking for updates...');
+            await loadFromGoogleDrive();
+        }
+        
+        // Auto-save functionality
+        function enableAutoSync() {
+            // Auto-sync every 2 minutes
+            if (autoSyncInterval) clearInterval(autoSyncInterval);
+            autoSyncInterval = setInterval(() => {
+                if (gapi && gapi.client && gapi.client.getToken() !== null) {
+                    console.log('🔄 Auto-syncing to Google Drive...');
+                    saveToGoogleDrive();
+                }
+            }, 2 * 60 * 1000);
+            console.log('✅ Auto-sync enabled (every 2 minutes)');
+        }
+        
+        // Auto-refresh from Drive (check for updates from other devices)
+        function enableAutoRefresh() {
+            // Check for updates every 5 minutes
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(async () => {
+                if (gapi && gapi.client && gapi.client.getToken() !== null) {
+                    console.log('🔍 Checking for updates from other devices...');
+                    const fileId = localStorage.getItem('gdrive_file_id');
+                    if (fileId) {
+                        try {
+                            // Get file metadata to check modification time
+                            const metadata = await gapi.client.drive.files.get({
+                                fileId: fileId,
+                                fields: 'modifiedTime'
+                            });
+                            
+                            const driveModTime = new Date(metadata.result.modifiedTime).getTime();
+                            
+                            // If Drive file is newer than our last sync, reload
+                            if (lastSyncTime && driveModTime > lastSyncTime) {
+                                console.log('📥 Updates detected! Reloading...');
+                                if (window.app) {
+                                    window.app.msg('📥 Updates detected from another device');
+                                }
+                                await autoLoadFromDrive();
+                            } else {
+                                console.log('✓ No updates detected');
+                            }
+                        } catch (err) {
+                            console.error('Auto-refresh check failed:', err);
+                        }
+                    }
+                }
+            }, 5 * 60 * 1000);
+            console.log('✅ Auto-refresh enabled (every 5 minutes)');
+        }
         
         // Expose functions globally
         window.gapiLoaded = gapiLoaded;
@@ -260,6 +421,7 @@
         window.disconnectGoogleDrive = disconnectGoogleDrive;
         window.saveToGoogleDrive = saveToGoogleDrive;
         window.loadFromGoogleDrive = loadFromGoogleDrive;
+        window.refreshFromDrive = refreshFromDrive;
         </script>
         
         <!-- Rest of your styles below -->
@@ -787,7 +949,8 @@
             
             <!-- GOOGLE DRIVE BUTTONS -->
             <button onclick="connectGoogleDrive()" style="background:#4285f4;">🔗 Connect Drive</button>
-            <button onclick="loadFromGoogleDrive()" style="background:#34a853;">📥 Load from Drive</button>
+            <button onclick="refreshFromDrive()" style="background:#34a853;">🔄 Refresh</button>
+            <button onclick="disconnectGoogleDrive()" style="background:#ea4335;color:white;">🔌 Disconnect</button>
             
             <button onclick="app.exportData()">💾 Export</button>
             <button onclick="document.getElementById('importFile').click()">📥 Import</button>
@@ -797,6 +960,7 @@
                 <div class="sync-indicator"></div>
                 <span id="syncStatus">Local Storage</span>
                 <span id="driveStatus" style="margin-left:10px;">⚪ Not connected</span>
+                <span id="lastSyncTime" style="margin-left:10px;font-size:11px;color:#999;"></span>
             </div>
         </div>
 
