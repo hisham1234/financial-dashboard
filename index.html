@@ -23,26 +23,39 @@
         
         // Initialize Google API
         function gapiLoaded() {
+            console.log('✅ gapiLoaded() called - Google API script loaded successfully');
             gapi.load('client', initializeGapiClient);
         }
         
         async function initializeGapiClient() {
-            await gapi.client.init({
-                apiKey: '',
-                discoveryDocs: [DISCOVERY_DOC],
-            });
-            gapiInited = true;
-            updateSigninStatus();
+            try {
+                console.log('🔧 Initializing GAPI client...');
+                await gapi.client.init({
+                    apiKey: '',
+                    discoveryDocs: [DISCOVERY_DOC],
+                });
+                gapiInited = true;
+                console.log('✅ GAPI initialized successfully! gapiInited =', gapiInited);
+                updateSigninStatus();
+            } catch (err) {
+                console.error('❌ GAPI initialization error:', err);
+            }
         }
         
         function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // defined later
-            });
-            gisInited = true;
-            updateSigninStatus();
+            try {
+                console.log('✅ gisLoaded() called - Google Identity Services script loaded successfully');
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: SCOPES,
+                    callback: '', // defined later
+                });
+                gisInited = true;
+                console.log('✅ GIS initialized successfully! gisInited =', gisInited);
+                updateSigninStatus();
+            } catch (err) {
+                console.error('❌ GIS initialization error:', err);
+            }
         }
         
         function updateSigninStatus() {
@@ -61,10 +74,16 @@
         
         // Connect to Google Drive
         function connectGoogleDrive() {
+            console.log('🔍 Checking initialization status...');
+            console.log('   gapiInited:', gapiInited);
+            console.log('   gisInited:', gisInited);
+            
             if (!gapiInited || !gisInited) {
-                alert('Google Drive is still initializing. Please wait a moment and try again.');
+                alert('Google Drive is still initializing. Please wait a moment and try again.\n\nStatus:\nGoogle API (gapi): ' + (gapiInited ? '✅' : '❌') + '\nGoogle Identity (gis): ' + (gisInited ? '✅' : '❌'));
                 return;
             }
+            
+            console.log('✅ Both services initialized, proceeding with connection...');
             
             tokenClient.callback = async (resp) => {
                 if (resp.error !== undefined) {
