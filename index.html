@@ -144,6 +144,11 @@
                 // Load file ID from localStorage
                 driveFileId = localStorage.getItem('gdrive_file_id');
                 
+                // Show loading message
+                if (window.app && driveFileId) {
+                    window.app.msg('🔄 Loading your data from Drive...');
+                }
+                
                 // Auto-load from Drive if file exists, otherwise save current data
                 if (driveFileId) {
                     await autoLoadFromDrive();
@@ -261,6 +266,8 @@
                 return;
             }
             
+            if (window.app) window.app.msg('🔄 Loading from Drive...');
+            
             try {
                 const response = await gapi.client.drive.files.get({
                     fileId: fileId,
@@ -271,6 +278,7 @@
                 
                 if (!window.app) {
                     console.error('App not ready');
+                    alert('⚠️ App not ready. Please wait a moment and try again.');
                     return;
                 }
                 
@@ -285,7 +293,7 @@
                 
                 window.app.render();
                 window.app.saveData();
-                window.app.msg('✅ Loaded from Google Drive');
+                window.app.msg('✅ Loaded latest data from Drive (Last saved: ' + new Date(imported.lastSaved).toLocaleString() + ')');
                 
                 lastSyncTime = Date.now();
                 updateSigninStatus();
@@ -295,13 +303,13 @@
                     localStorage.removeItem('gdrive_file_id');
                     if (window.app) window.app.msg('⚠️ Backup file not found. It may have been deleted.', true);
                 } else {
-                    if (window.app) window.app.msg('⚠️ Failed to load from Google Drive', true);
+                    if (window.app) window.app.msg('⚠️ Failed to load from Google Drive. Check console for details.', true);
                 }
             }
         }
         
-        // Auto-load from Drive (silent, no user notification)
-        async function autoLoadFromDrive() {
+        // Auto-load from Drive (with retry logic for app readiness)
+        async function autoLoadFromDrive(retryCount = 0) {
             if (!gapi.client.getToken()) {
                 console.log('Not connected to Drive, skipping auto-load');
                 return;
@@ -311,11 +319,14 @@
             
             if (!fileId) {
                 console.log('No Drive file ID found, skipping auto-load');
+                if (window.app) {
+                    window.app.msg('ℹ️ No Drive backup found. Your data will be saved to Drive automatically.');
+                }
                 return;
             }
             
             try {
-                console.log('🔄 Auto-loading from Google Drive...');
+                console.log('🔄 Auto-loading from Google Drive... (attempt ' + (retryCount + 1) + ')');
                 const response = await gapi.client.drive.files.get({
                     fileId: fileId,
                     alt: 'media'
@@ -323,9 +334,15 @@
                 
                 const imported = JSON.parse(response.body);
                 
+                // Check if app is ready
                 if (!window.app) {
-                    console.log('App not ready yet, will retry');
-                    setTimeout(() => autoLoadFromDrive(), 2000);
+                    console.log('App not ready yet, will retry...');
+                    if (retryCount < 10) { // Retry up to 10 times (20 seconds)
+                        setTimeout(() => autoLoadFromDrive(retryCount + 1), 2000);
+                    } else {
+                        console.error('App failed to initialize after 20 seconds');
+                        alert('⚠️ App initialization timeout. Please refresh the page and try again.');
+                    }
                     return;
                 }
                 
@@ -340,7 +357,10 @@
                 
                 window.app.render();
                 window.app.saveData();
-                console.log('✅ Auto-loaded from Google Drive');
+                console.log('✅ Auto-loaded from Google Drive successfully!');
+                
+                // Show user notification
+                window.app.msg('✅ Loaded latest data from Drive');
                 
                 lastSyncTime = Date.now();
                 updateSigninStatus();
@@ -349,6 +369,14 @@
                 if (err.status === 404) {
                     localStorage.removeItem('gdrive_file_id');
                     console.log('Drive file not found');
+                    if (window.app) {
+                        window.app.msg('ℹ️ No Drive backup found. Your data will be saved automatically.');
+                    }
+                } else {
+                    console.error('Failed to load from Drive:', err);
+                    if (window.app) {
+                        window.app.msg('⚠️ Failed to load from Drive. Click "Refresh" to try again.', true);
+                    }
                 }
             }
         }
@@ -356,12 +384,32 @@
         // Refresh from Drive (checks for updates from other devices)
         async function refreshFromDrive() {
             if (!window.app) {
-                window.app.msg('⚠️ App not ready', true);
+                alert('⚠️ App not ready. Please wait a moment and try again.');
                 return;
             }
             
             window.app.msg('🔄 Checking for updates...');
             await loadFromGoogleDrive();
+        }
+        
+        // Debug status (for troubleshooting)
+        function showDriveStatus() {
+            const status = {
+                'GAPI Initialized': gapiInited,
+                'GIS Initialized': gisInited,
+                'Connected': gapi && gapi.client && gapi.client.getToken() !== null,
+                'File ID': localStorage.getItem('gdrive_file_id') || 'None',
+                'Access Token': localStorage.getItem('gdrive_access_token') ? 'Present' : 'None',
+                'App Ready': !!window.app,
+                'Last Sync': lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Never'
+            };
+            
+            console.log('=== Google Drive Status ===');
+            for (let key in status) {
+                console.log(key + ':', status[key]);
+            }
+            
+            alert('Drive Status:\n\n' + Object.entries(status).map(([k,v]) => k + ': ' + v).join('\n'));
         }
         
         // Auto-save functionality
@@ -422,6 +470,7 @@
         window.saveToGoogleDrive = saveToGoogleDrive;
         window.loadFromGoogleDrive = loadFromGoogleDrive;
         window.refreshFromDrive = refreshFromDrive;
+        window.showDriveStatus = showDriveStatus;
         </script>
         
         <!-- Rest of your styles below -->
@@ -959,7 +1008,7 @@
             <div class="sync-status">
                 <div class="sync-indicator"></div>
                 <span id="syncStatus">Local Storage</span>
-                <span id="driveStatus" style="margin-left:10px;">⚪ Not connected</span>
+                <span id="driveStatus" style="margin-left:10px;cursor:pointer;" onclick="showDriveStatus()">⚪ Not connected</span>
                 <span id="lastSyncTime" style="margin-left:10px;font-size:11px;color:#999;"></span>
             </div>
         </div>
