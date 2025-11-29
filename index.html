@@ -7,8 +7,8 @@
         <title>Advanced Financial Dashboard</title>
         
         <!-- ADD THESE GOOGLE DRIVE SCRIPTS -->
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
-        <script src="https://apis.google.com/js/api.js" async defer></script>
+        <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+        <script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
         
         <script>
         // ==================== GOOGLE DRIVE CONFIGURATION ====================
@@ -28,7 +28,7 @@
         
         async function initializeGapiClient() {
             await gapi.client.init({
-                apiKey: '',
+                apiKey: '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',
                 discoveryDocs: [DISCOVERY_DOC],
             });
             gapiInited = true;
