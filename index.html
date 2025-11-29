@@ -11,6 +11,15 @@
         <script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
         
         <script>
+        // Filter out Google API COOP warnings (harmless, known issue)
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('Cross-Origin-Opener-Policy')) {
+                return; // Suppress COOP warnings
+            }
+            originalWarn.apply(console, args);
+        };
+        
         // ==================== GOOGLE DRIVE CONFIGURATION ====================
         const GOOGLE_CLIENT_ID = '9090497174-volmpgatcfokales3aeggvj1su63td5u.apps.googleusercontent.com'; // REPLACE THIS
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
