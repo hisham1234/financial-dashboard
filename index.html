@@ -105,6 +105,18 @@
                     console.log('🔄 Auto-connected with saved token');
                     updateSigninStatus();
                     
+                    // Search for existing file in Drive (in case localStorage was cleared)
+                    let fileId = localStorage.getItem('gdrive_file_id');
+                    if (!fileId) {
+                        console.log('🔍 Searching for existing backup file...');
+                        fileId = await findExistingDriveFile();
+                        if (fileId) {
+                            localStorage.setItem('gdrive_file_id', fileId);
+                            driveFileId = fileId;
+                            console.log('✅ Found existing file:', fileId);
+                        }
+                    }
+                    
                     // Auto-load from Drive on startup
                     await autoLoadFromDrive();
                     
@@ -195,8 +207,19 @@
                 updateSigninStatus();
                 if (window.app) window.app.msg('✅ Connected to Google Drive');
                 
-                // Load file ID from localStorage
-                driveFileId = localStorage.getItem('gdrive_file_id');
+                // Search for existing file ID in Drive first, then check localStorage
+                console.log('🔍 Looking for existing backup file...');
+                driveFileId = await findExistingDriveFile();
+                
+                if (driveFileId) {
+                    // Found file in Drive, save it locally
+                    localStorage.setItem('gdrive_file_id', driveFileId);
+                    console.log('✅ Found existing backup file:', driveFileId);
+                } else {
+                    // No file in Drive, check localStorage
+                    driveFileId = localStorage.getItem('gdrive_file_id');
+                    console.log('File ID from localStorage:', driveFileId);
+                }
                 
                 // Show loading message
                 if (window.app && driveFileId) {
@@ -207,7 +230,8 @@
                 if (driveFileId) {
                     await autoLoadFromDrive();
                 } else {
-                    await saveToGoogleDrive();
+                    console.log('No backup file found, will create one on first save');
+                    if (window.app) window.app.msg('ℹ️ No backup found. Your data will be saved to Drive on next change.');
                 }
                 
                 // Enable auto-sync and auto-refresh
@@ -247,6 +271,31 @@
             }
         }
         
+        // Search for existing backup file in Drive
+        async function findExistingDriveFile() {
+            try {
+                console.log('🔍 Searching for existing backup file in Drive...');
+                const response = await gapi.client.drive.files.list({
+                    q: "name='financial-dashboard-data.json' and trashed=false",
+                    fields: 'files(id, name, modifiedTime)',
+                    spaces: 'drive',
+                    orderBy: 'modifiedTime desc'
+                });
+                
+                if (response.result.files && response.result.files.length > 0) {
+                    const file = response.result.files[0];
+                    console.log('✅ Found existing file:', file.id, 'modified:', file.modifiedTime);
+                    return file.id;
+                } else {
+                    console.log('ℹ️ No existing file found');
+                    return null;
+                }
+            } catch (err) {
+                console.error('Error searching for file:', err);
+                return null;
+            }
+        }
+        
         // Save to Google Drive
         async function saveToGoogleDrive() {
             // Check if gapi is fully initialized
@@ -282,7 +331,21 @@
             }, null, 2);
             
             try {
-                const fileId = localStorage.getItem('gdrive_file_id');
+                let fileId = localStorage.getItem('gdrive_file_id');
+                
+                // If no file ID in localStorage, search for existing file in Drive
+                if (!fileId) {
+                    console.log('No local file ID, searching Drive for existing backup...');
+                    fileId = await findExistingDriveFile();
+                    
+                    if (fileId) {
+                        // Found existing file, save the ID locally
+                        localStorage.setItem('gdrive_file_id', fileId);
+                        driveFileId = fileId;
+                        console.log('✅ Using existing Drive file:', fileId);
+                        if (window.app) window.app.msg('✅ Found existing backup in Drive');
+                    }
+                }
                 
                 if (fileId) {
                     // Update existing file
@@ -420,14 +483,24 @@
                 return;
             }
             
-            const fileId = localStorage.getItem('gdrive_file_id');
+            let fileId = localStorage.getItem('gdrive_file_id');
             
+            // If no file ID, search for existing file
             if (!fileId) {
-                console.log('No Drive file ID found, skipping auto-load');
-                if (window.app) {
-                    window.app.msg('ℹ️ No Drive backup found. Your data will be saved to Drive automatically.');
+                console.log('No file ID in localStorage, searching Drive...');
+                fileId = await findExistingDriveFile();
+                
+                if (fileId) {
+                    localStorage.setItem('gdrive_file_id', fileId);
+                    driveFileId = fileId;
+                    console.log('✅ Found and saved file ID:', fileId);
+                } else {
+                    console.log('No Drive file ID found, skipping auto-load');
+                    if (window.app) {
+                        window.app.msg('ℹ️ No Drive backup found. Your data will be saved to Drive automatically.');
+                    }
+                    return;
                 }
-                return;
             }
             
             try {
