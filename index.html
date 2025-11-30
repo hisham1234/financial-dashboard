@@ -86,7 +86,11 @@
                 });
                 gisInited = true;
                 console.log('✅ GIS initialized successfully! gisInited =', gisInited);
-                updateSigninStatus();
+                
+                // Only update status if gapi is ready
+                if (typeof gapi !== 'undefined' && gapi.client) {
+                    updateSigninStatus();
+                }
             } catch (err) {
                 console.error('❌ GIS initialization error:', err);
             }
@@ -115,6 +119,12 @@
         }
         
         function updateSigninStatus() {
+            // Check if gapi is ready
+            if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.getToken) {
+                console.log('⏳ gapi not ready yet, skipping status update');
+                return;
+            }
+            
             const token = gapi.client.getToken();
             const statusEl = document.getElementById('driveStatus');
             const lastSyncEl = document.getElementById('lastSyncTime');
@@ -239,6 +249,12 @@
         
         // Save to Google Drive
         async function saveToGoogleDrive() {
+            // Check if gapi is fully initialized
+            if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.getToken) {
+                console.log('⏳ Google API not ready yet, skipping Drive save');
+                return;
+            }
+            
             if (!gapi.client.getToken()) {
                 console.log('Not connected to Drive, data only in cache');
                 return;
@@ -273,8 +289,11 @@
                     updateSigninStatus();
                     
                     // Update syncStatus to show Drive sync
-                    document.getElementById('syncStatus').textContent = 'Synced ' + new Date().toLocaleTimeString();
-                    document.getElementById('syncStatus').style.color = '';
+                    const syncStatusEl = document.getElementById('syncStatus');
+                    if (syncStatusEl) {
+                        syncStatusEl.textContent = 'Synced ' + new Date().toLocaleTimeString();
+                        syncStatusEl.style.color = '';
+                    }
                 } else {
                     // Create new file
                     const metadata = {
@@ -302,14 +321,20 @@
                     updateSigninStatus();
                     if (window.app) window.app.msg('✅ Created backup in Google Drive');
                     
-                    document.getElementById('syncStatus').textContent = 'Synced ' + new Date().toLocaleTimeString();
-                    document.getElementById('syncStatus').style.color = '';
+                    const syncStatusEl = document.getElementById('syncStatus');
+                    if (syncStatusEl) {
+                        syncStatusEl.textContent = 'Synced ' + new Date().toLocaleTimeString();
+                        syncStatusEl.style.color = '';
+                    }
                 }
             } catch (err) {
                 console.error('Google Drive save error:', err);
                 if (window.app) window.app.msg('⚠️ Failed to sync to Google Drive', true);
-                document.getElementById('syncStatus').textContent = '⚠️ Sync failed!';
-                document.getElementById('syncStatus').style.color = '#e74c3c';
+                const syncStatusEl = document.getElementById('syncStatus');
+                if (syncStatusEl) {
+                    syncStatusEl.textContent = '⚠️ Sync failed!';
+                    syncStatusEl.style.color = '#e74c3c';
+                }
             }
         }
         
@@ -1509,17 +1534,23 @@
                         lastSaved: new Date().toISOString(),
                         isCacheOnly: true // Mark this as cache, not source of truth
                     }));
-                    document.getElementById('syncStatus').textContent = 'Cached ' + new Date().toLocaleTimeString();
                     
-                    // IMMEDIATELY sync to Google Drive (source of truth)
+                    const syncStatusEl = document.getElementById('syncStatus');
+                    if (syncStatusEl) {
+                        syncStatusEl.textContent = 'Cached ' + new Date().toLocaleTimeString();
+                    }
+                    
+                    // IMMEDIATELY sync to Google Drive (source of truth) - but only if fully initialized
                     if (typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken && gapi.client.getToken() !== null) {
                         // Save to Drive immediately (not delayed)
                         saveToGoogleDrive();
                     } else {
                         // Show warning if not connected to Drive
                         console.warn('⚠️ Not connected to Drive - data only in cache!');
-                        document.getElementById('syncStatus').textContent = '⚠️ Cache only - Connect to Drive!';
-                        document.getElementById('syncStatus').style.color = '#f39c12';
+                        if (syncStatusEl) {
+                            syncStatusEl.textContent = '⚠️ Cache only - Connect to Drive!';
+                            syncStatusEl.style.color = '#f39c12';
+                        }
                     }
                 } catch(e) {
                     this.msg('⚠️ Failed to save', true);
