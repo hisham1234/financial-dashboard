@@ -4846,12 +4846,7 @@
                 if (!d || !d.mizuho) return 0;
                 
                 // Total income from Mizuho
-                let income = d.mizuho.salary || 0;
-
-                 // Add additional income
-                 if (d.mizuho.additionalIncome) {
-                    d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
-                }
+                const income = d.mizuho.salary || 0;
                 
                 // Total expenses from Mizuho
                 let totalExpenses = 0;
