@@ -5050,7 +5050,11 @@
                 html += '</div>';
                 
                 // Income vs Expenses breakdown
-                const income = d.mizuho ? d.mizuho.salary : 0;
+                //const income = d.mizuho ? d.mizuho.salary : 0;
+                let income = d.mizuho ? d.mizuho.salary : 0;
+                if (d.mizuho && d.mizuho.additionalIncome) {
+                    d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+                }
                 let mizuhoExpenses = 0;
                 if (d.mizuho) {
                     if (d.mizuho.fixedExp) {
@@ -5393,7 +5397,11 @@
                         const d = this.data[monthKey];
                         if (!d || !d.mizuho) continue;
                         
-                        const income = d.mizuho.salary || 0;
+                        //const income = d.mizuho.salary || 0;
+                        let income = monthData.mizuho.salary || 0;
+                        if (monthData.mizuho.additionalIncome) {
+                            monthData.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+                        }
                         let expenses = 0;
                         
                         if (d.mizuho.fixedExp) {
