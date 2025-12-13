@@ -5401,9 +5401,10 @@
                         if (!d || !d.mizuho) continue;
                         
                         //const income = d.mizuho.salary || 0;
-                        let income = monthData.mizuho.salary || 0;
-                        if (monthData.mizuho.additionalIncome) {
-                            monthData.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+                       // let income = monthData.mizuho.salary || 0;
+                        let income = d.mizuho.salary || 0;
+                        if (d.mizuho.additionalIncome) {
+                            d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
                         }
                         let expenses = 0;
                         
