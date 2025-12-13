@@ -4901,8 +4901,11 @@
                         const monthData = this.data[monthKey];
                         if (!monthData || !monthData.mizuho) continue;
                         
-                        const income = monthData.mizuho.salary || 0;
-                        
+                        //const income = monthData.mizuho.salary || 0;
+                        let income = monthData.mizuho.salary || 0;
+                        if (monthData.mizuho.additionalIncome) {
+                            monthData.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+                        }
                         let expenses = 0;
                         if (monthData.mizuho.fixedExp) {
                             for (let cat in monthData.mizuho.fixedExp) {
