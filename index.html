@@ -5210,16 +5210,16 @@
                             });
                         }
                         
-                        // savingsAllocations.push({
-                        //     type: 'deposit',
-                        //     date: dep.date,
-                        //     account: 'Yucho',
-                        //     fund: fundName,
-                        //     amount: dep.amount,
-                        //     expenses: expensesFromFund,
-                        //     net: dep.amount - expensesFromFund,
-                        //     desc: dep.source || '-'
-                        // });
+                        savingsAllocations.push({
+                            type: 'deposit',
+                            date: dep.date,
+                            account: 'Yucho',
+                            fund: fundName,
+                            amount: dep.amount,
+                            expenses: expensesFromFund,
+                            net: dep.amount - expensesFromFund,
+                            desc: dep.source || '-'
+                        });
                     });
                 }
                 
