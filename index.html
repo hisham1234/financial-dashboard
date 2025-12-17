@@ -1664,7 +1664,19 @@
                         // Make sure we have the same number of funds
                         if (nextData.yucho.funds.length !== currentData.yucho.funds.length) {
                             // Copy fund structure if mismatch
-                            nextData.yucho.funds = currentData.yucho.funds.map(f => ({ name: f.name, balance: 0 }));
+                           // nextData.yucho.funds = currentData.yucho.funds.map(f => ({ name: f.name, balance: 0 }));
+
+                            const newFunds = [];
+                            currentData.yucho.funds.forEach((currentFund, idx) => {
+                            if (nextData.yucho.funds[idx]) {
+                            // Fund exists at this index, keep it
+                            newFunds.push(nextData.yucho.funds[idx]);
+                            } else {
+                            // New fund added, initialize with 0 balance
+                            newFunds.push({ name: currentFund.name, balance: 0 });
+                            }
+                            });
+                            nextData.yucho.funds = newFunds;
                         }
                         
                         currentData.yucho.funds.forEach((fund, fundIdx) => {
@@ -3924,6 +3936,44 @@
                 this.closeEditFundNameModal();
             },
 
+            //     addNewFund: function() {
+            //     const nameEl = document.getElementById('newFundName');
+            //     const balanceEl = document.getElementById('newFundBalance');
+                
+            //     if (!nameEl || !balanceEl) {
+            //         this.msg('⚠️ Form elements not found', true);
+            //         return;
+            //     }
+                
+            //     const name = nameEl.value.trim();
+            //     const balance = parseFloat(balanceEl.value);
+                
+            //     if (!name) {
+            //         this.msg('⚠️ Please enter a fund name', true);
+            //         return;
+            //     }
+                
+            //     if (isNaN(balance) || balance < 0) {
+            //         this.msg('⚠️ Please enter a valid initial balance (0 or more)', true);
+            //         return;
+            //     }
+                
+            //     // Check if fund name already exists
+            //     const exists = this.data[this.month].yucho.funds.find(f => f.name === name);
+            //     if (exists) {
+            //         this.msg('⚠️ A fund with this name already exists', true);
+            //         return;
+            //     }
+                
+            //     this.data[this.month].yucho.funds.push({
+            //         name: name,
+            //         balance: balance || 0
+            //     });
+                
+            //     this.render();
+            //     this.msg('✅ New fund added: ' + name + ' (¥' + this.fmt(balance || 0) + ')');
+            //     this.saveData();
+            // },
             addNewFund: function() {
                 const nameEl = document.getElementById('newFundName');
                 const balanceEl = document.getElementById('newFundBalance');
@@ -3957,6 +4007,24 @@
                     name: name,
                     balance: balance || 0
                 });
+                
+                // Add this new fund to all future months
+                const currentMonthIndex = Object.keys(this.data).sort().indexOf(this.month);
+                const allMonths = Object.keys(this.data).sort();
+                
+                for (let i = currentMonthIndex + 1; i < allMonths.length; i++) {
+                    const futureMonth = allMonths[i];
+                    if (this.data[futureMonth].yucho && this.data[futureMonth].yucho.funds) {
+                        // Check if this fund already exists in future month
+                        const existsInFuture = this.data[futureMonth].yucho.funds.find(f => f.name === name);
+                        if (!existsInFuture) {
+                            this.data[futureMonth].yucho.funds.push({
+                                name: name,
+                                balance: 0
+                            });
+                        }
+                    }
+                }
                 
                 this.render();
                 this.msg('✅ New fund added: ' + name + ' (¥' + this.fmt(balance || 0) + ')');
