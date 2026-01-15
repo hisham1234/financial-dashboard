@@ -1197,6 +1197,7 @@
                 <option value="monthly-savings">💰 Monthly Savings Report</option>
                 <option value="annual-savings">📈 Annual Savings Report</option>
                 <option value="expense-analysis">📉 Expense Analysis & Insights</option>
+                <option value="total-expense-overview">💸 Total Expense Overview</option>
             </select>
             <label>📅 Month:</label>
             <select id="monthSelect" onchange="app.switchMonth()"></select>
@@ -2020,6 +2021,8 @@
                     this.renderExpenseAnalysis();
                 } else if (this.acc === 'mizuho') {
                     this.renderMizuho();
+                } else if (this.acc === 'total-expense-overview') {
+                    this.renderTotalExpenseOverview();
                 } else if (this.acc === 'yucho') {
                     this.renderYucho();
                 } else {
@@ -4842,17 +4845,68 @@
             },
 
             // Savings Calculation Functions
-            calculateMonthlySavings: function() {
+            // calculateMonthlySavings: function() {
+            //     const d = this.data[this.month];
+            //     if (!d || !d.mizuho) return 0;
+                
+            //     // Total income from Mizuho
+            //     let income = d.mizuho.salary || 0;
+            //         if (d.mizuho.additionalIncome) {
+            //             d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+            //         }
+                
+            //     // Total expenses from Mizuho
+            //     let totalExpenses = 0;
+            //     if (d.mizuho.fixedExp) {
+            //         for (let cat in d.mizuho.fixedExp) {
+            //             if (d.mizuho.fixedExp[cat].actual) {
+            //                 d.mizuho.fixedExp[cat].actual.forEach(e => totalExpenses += e.amount);
+            //             }
+            //         }
+            //     }
+            //     if (d.mizuho.extras) {
+            //         d.mizuho.extras.forEach(e => totalExpenses += e.amount);
+            //     }
+                
+            //     // Add expenses from savings funds (Yucho funds + other accounts)
+            //     let expensesFromSavings = 0;
+                
+            //     // Yucho fund expenses
+            //     if (d.yucho && d.yucho.expenses) {
+            //         d.yucho.expenses.forEach(e => expensesFromSavings += e.amount);
+            //     }
+                
+            //     // Other account expenses
+            //     ['slsenfin', 'rakuten', 'medfun'].forEach(acc => {
+            //         if (d[acc] && d[acc].expenses) {
+            //             d[acc].expenses.forEach(e => expensesFromSavings += e.amount);
+            //         }
+            //     });
+                
+            //     // Custom account expenses
+            //     if (this.customAccounts) {
+            //         this.customAccounts.forEach(customAcc => {
+            //             if (d[customAcc.id] && d[customAcc.id].expenses) {
+            //                 d[customAcc.id].expenses.forEach(e => expensesFromSavings += e.amount);
+            //             }
+            //         });
+            //     }
+                
+            //     // Net savings = Income - Mizuho Expenses - Expenses from Savings
+            //     return income - totalExpenses - expensesFromSavings;
+            // },
+
+                calculateMonthlySavings: function() {
                 const d = this.data[this.month];
                 if (!d || !d.mizuho) return 0;
                 
                 // Total income from Mizuho
                 let income = d.mizuho.salary || 0;
-                    if (d.mizuho.additionalIncome) {
-                        d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
-                    }
+                if (d.mizuho.additionalIncome) {
+                    d.mizuho.additionalIncome.forEach(inc => income += inc.amount);
+                }
                 
-                // Total expenses from Mizuho
+                // Total expenses from Mizuho ONLY
                 let totalExpenses = 0;
                 if (d.mizuho.fixedExp) {
                     for (let cat in d.mizuho.fixedExp) {
@@ -4865,32 +4919,9 @@
                     d.mizuho.extras.forEach(e => totalExpenses += e.amount);
                 }
                 
-                // Add expenses from savings funds (Yucho funds + other accounts)
-                let expensesFromSavings = 0;
-                
-                // Yucho fund expenses
-                if (d.yucho && d.yucho.expenses) {
-                    d.yucho.expenses.forEach(e => expensesFromSavings += e.amount);
-                }
-                
-                // Other account expenses
-                ['slsenfin', 'rakuten', 'medfun'].forEach(acc => {
-                    if (d[acc] && d[acc].expenses) {
-                        d[acc].expenses.forEach(e => expensesFromSavings += e.amount);
-                    }
-                });
-                
-                // Custom account expenses
-                if (this.customAccounts) {
-                    this.customAccounts.forEach(customAcc => {
-                        if (d[customAcc.id] && d[customAcc.id].expenses) {
-                            d[customAcc.id].expenses.forEach(e => expensesFromSavings += e.amount);
-                        }
-                    });
-                }
-                
-                // Net savings = Income - Mizuho Expenses - Expenses from Savings
-                return income - totalExpenses - expensesFromSavings;
+                // Monthly savings = Mizuho Income - Mizuho Expenses ONLY
+                // (Don't deduct expenses from other accounts)
+                return income - totalExpenses;
             },
 
             calculateAnnualSavings: function() {
@@ -5502,6 +5533,144 @@
                 html += '</div>';
                 document.getElementById('content').innerHTML = html;
             },
+
+            renderTotalExpenseOverview: function() {
+    const d = this.data[this.month];
+    if (!d) {
+        document.getElementById('content').innerHTML = '<div class="section"><p>No data available</p></div>';
+        return;
+    }
+
+    let html = '<div class="section"><div class="section-title">💸 Total Expense Overview - ' + this.month + '</div>';
+    
+    // Calculate expenses from all accounts
+    let mizuhoExpenses = 0;
+    let yuchoExpenses = 0;
+    let otherAccountsExpenses = {};
+    let grandTotal = 0;
+    
+    // Mizuho expenses
+    if (d.mizuho) {
+        if (d.mizuho.fixedExp) {
+            for (let cat in d.mizuho.fixedExp) {
+                if (d.mizuho.fixedExp[cat].actual) {
+                    d.mizuho.fixedExp[cat].actual.forEach(e => mizuhoExpenses += e.amount);
+                }
+            }
+        }
+        if (d.mizuho.extras) {
+            d.mizuho.extras.forEach(e => mizuhoExpenses += e.amount);
+        }
+    }
+    grandTotal += mizuhoExpenses;
+    
+    // Yucho expenses
+    if (d.yucho && d.yucho.expenses) {
+        d.yucho.expenses.forEach(e => yuchoExpenses += e.amount);
+    }
+    grandTotal += yuchoExpenses;
+    
+    // Other accounts (slsenfin, rakuten, medfun, custom)
+    const accountNames = {
+        slsenfin: 'SLSenfin',
+        rakuten: 'Rakuten',
+        medfun: '7-11 Account'
+    };
+    
+    ['slsenfin', 'rakuten', 'medfun'].forEach(acc => {
+        if (d[acc] && d[acc].expenses) {
+            let total = 0;
+            d[acc].expenses.forEach(e => total += e.amount);
+            if (total > 0) {
+                otherAccountsExpenses[accountNames[acc]] = total;
+                grandTotal += total;
+            }
+        }
+    });
+    
+    // Custom accounts
+    if (this.customAccounts) {
+        this.customAccounts.forEach(customAcc => {
+            if (d[customAcc.id] && d[customAcc.id].expenses) {
+                let total = 0;
+                d[customAcc.id].expenses.forEach(e => total += e.amount);
+                if (total > 0) {
+                    otherAccountsExpenses[customAcc.name] = total;
+                    grandTotal += total;
+                }
+            }
+        });
+    }
+    
+    // Grand Total Banner
+    html += '<div class="assets-banner" style="background: linear-gradient(135deg, #f5576c 0%, #dc3b50 100%);">';
+    html += '<div class="assets-label">TOTAL EXPENSES (ALL ACCOUNTS)</div>';
+    html += '<div>¥' + this.fmt(grandTotal) + '</div>';
+    html += '</div>';
+    
+    // Breakdown by account
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:20px 0;">';
+    
+    // Mizuho card
+    html += '<div style="background:#ffebee;padding:20px;border-radius:10px;text-align:center;">';
+    html += '<h3 style="color:#f5576c;margin-bottom:10px;">Mizuho</h3>';
+    html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(mizuhoExpenses) + '</div>';
+    html += '<div style="font-size:12px;color:#999;margin-top:5px;">' + (grandTotal > 0 ? Math.round((mizuhoExpenses/grandTotal)*100) : 0) + '% of total</div>';
+    html += '</div>';
+    
+    // Yucho card
+    html += '<div style="background:#fff3cd;padding:20px;border-radius:10px;text-align:center;">';
+    html += '<h3 style="color:#856404;margin-bottom:10px;">Yucho</h3>';
+    html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(yuchoExpenses) + '</div>';
+    html += '<div style="font-size:12px;color:#999;margin-top:5px;">' + (grandTotal > 0 ? Math.round((yuchoExpenses/grandTotal)*100) : 0) + '% of total</div>';
+    html += '</div>';
+    
+    // Other accounts cards
+    for (let accName in otherAccountsExpenses) {
+        html += '<div style="background:#e3f2fd;padding:20px;border-radius:10px;text-align:center;">';
+        html += '<h3 style="color:#667eea;margin-bottom:10px;">' + accName + '</h3>';
+        html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(otherAccountsExpenses[accName]) + '</div>';
+        html += '<div style="font-size:12px;color:#999;margin-top:5px;">' + (grandTotal > 0 ? Math.round((otherAccountsExpenses[accName]/grandTotal)*100) : 0) + '% of total</div>';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    
+    // Detailed breakdown table
+    html += '<div class="section"><div class="section-title">📊 Detailed Breakdown</div>';
+    html += '<div class="table-container"><table><thead><tr><th>Account</th><th>Amount</th><th>% of Total</th></tr></thead><tbody>';
+    
+    html += '<tr style="background:#ffebee;">';
+    html += '<td><strong>Mizuho (Main)</strong></td>';
+    html += '<td style="font-weight:bold;">¥' + this.fmt(mizuhoExpenses) + '</td>';
+    html += '<td>' + (grandTotal > 0 ? Math.round((mizuhoExpenses/grandTotal)*100) : 0) + '%</td>';
+    html += '</tr>';
+    
+    html += '<tr style="background:#fff3cd;">';
+    html += '<td><strong>Yucho (Savings Funds)</strong></td>';
+    html += '<td style="font-weight:bold;">¥' + this.fmt(yuchoExpenses) + '</td>';
+    html += '<td>' + (grandTotal > 0 ? Math.round((yuchoExpenses/grandTotal)*100) : 0) + '%</td>';
+    html += '</tr>';
+    
+    for (let accName in otherAccountsExpenses) {
+        html += '<tr>';
+        html += '<td><strong>' + accName + '</strong></td>';
+        html += '<td style="font-weight:bold;">¥' + this.fmt(otherAccountsExpenses[accName]) + '</td>';
+        html += '<td>' + (grandTotal > 0 ? Math.round((otherAccountsExpenses[accName]/grandTotal)*100) : 0) + '%</td>';
+        html += '</tr>';
+    }
+    
+    html += '<tr class="total-row">';
+    html += '<td><strong>GRAND TOTAL</strong></td>';
+    html += '<td style="font-size:18px;"><strong>¥' + this.fmt(grandTotal) + '</strong></td>';
+    html += '<td><strong>100%</strong></td>';
+    html += '</tr>';
+    
+    html += '</tbody></table></div></div>';
+    
+    html += '</div>';
+    document.getElementById('content').innerHTML = html;
+},
 
             showExpenseAnalysis: function() {
                 this.acc = 'expense-analysis';
