@@ -1251,6 +1251,10 @@
                 <div class="summary-label">Total Expense (Mizuho)</div>
                 <div class="summary-value">¥<span id="totalExpenses">0</span></div>
             </div>
+            <div class="summary-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);" onclick="app.showTotalExpenseOverview()">
+                <div class="summary-label">Total Expense (All Accounts)</div>
+                <div class="summary-value">¥<span id="totalExpensesAll">0</span></div>
+            </div>
             <div class="summary-card" style="background: linear-gradient(135deg, #43e97b 0%, #38c968 100%);" onclick="app.showMonthlySavings()">
                 <div class="summary-label">Monthly Savings</div>
                 <div class="summary-value">¥<span id="monthlySavings">0</span></div>
@@ -5067,6 +5071,12 @@
             showMonthlySavings: function() {
                 this.acc = 'monthly-savings';
                 document.getElementById('accountSelect').value = 'monthly-savings';
+                this.render();
+            },
+
+            showTotalExpenseOverview: function() {
+                this.acc = 'total-expense-overview';
+                document.getElementById('accountSelect').value = 'total-expense-overview';
                 this.render();
             },
 
