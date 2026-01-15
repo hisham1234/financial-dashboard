@@ -1833,23 +1833,49 @@
                 // Update custom account cards
                 this.updateCustomAccountCards();
                 
-                // Calculate total expenses (fixed + variable)
-                let totalExpenses = 0;
-                if (d.mizuho) {
-                    // Fixed expenses
-                    if (d.mizuho.fixedExp) {
-                        for (let cat in d.mizuho.fixedExp) {
-                            if (d.mizuho.fixedExp[cat].actual) {
-                                d.mizuho.fixedExp[cat].actual.forEach(e => totalExpenses += e.amount);
+                // Calculate total expenses (fixed + variable) - Mizuho only
+                    let totalExpenses = 0;
+                    if (d.mizuho) {
+                        // Fixed expenses
+                        if (d.mizuho.fixedExp) {
+                            for (let cat in d.mizuho.fixedExp) {
+                                if (d.mizuho.fixedExp[cat].actual) {
+                                    d.mizuho.fixedExp[cat].actual.forEach(e => totalExpenses += e.amount);
+                                }
                             }
                         }
+                        // Variable/Extra expenses
+                        if (d.mizuho.extras) {
+                            d.mizuho.extras.forEach(e => totalExpenses += e.amount);
+                        }
                     }
-                    // Variable/Extra expenses
-                    if (d.mizuho.extras) {
-                        d.mizuho.extras.forEach(e => totalExpenses += e.amount);
+                    document.getElementById('totalExpenses').textContent = this.fmt(totalExpenses);
+
+                    // Calculate total expenses from ALL accounts
+                    let totalExpensesAll = totalExpenses; // Start with Mizuho
+
+                    // Add Yucho expenses
+                    if (d.yucho && d.yucho.expenses) {
+                        d.yucho.expenses.forEach(e => totalExpensesAll += e.amount);
                     }
-                }
-                document.getElementById('totalExpenses').textContent = this.fmt(totalExpenses);
+
+                    // Add other accounts
+                    ['slsenfin', 'rakuten', 'medfun'].forEach(acc => {
+                        if (d[acc] && d[acc].expenses) {
+                            d[acc].expenses.forEach(e => totalExpensesAll += e.amount);
+                        }
+                    });
+
+                    // Add custom accounts
+                    if (this.customAccounts) {
+                        this.customAccounts.forEach(customAcc => {
+                            if (d[customAcc.id] && d[customAcc.id].expenses) {
+                                d[customAcc.id].expenses.forEach(e => totalExpensesAll += e.amount);
+                            }
+                        });
+                    }
+
+                    document.getElementById('totalExpensesAll').textContent = this.fmt(totalExpensesAll);
                 
                 // Calculate monthly savings
                 const monthlySavings = this.calculateMonthlySavings();
