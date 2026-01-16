@@ -5342,20 +5342,20 @@
                 }
                 debugger;
                 // Get Yucho direct deposits
-                if (d.yucho && d.yucho.additions) {
-                    d.yucho.additions.forEach(dep => {
-                        const fundName = d.yucho.funds[dep.fundIdx] ? d.yucho.funds[dep.fundIdx].name : 'Unknown Fund';
+                // if (d.yucho && d.yucho.additions) {
+                //     d.yucho.additions.forEach(dep => {
+                //         const fundName = d.yucho.funds[dep.fundIdx] ? d.yucho.funds[dep.fundIdx].name : 'Unknown Fund';
                         
-                        savingsAllocations.push({
-                            type: 'deposit',
-                            date: dep.date,
-                            account: 'Yucho',
-                            fund: fundName,
-                            amount: dep.amount,
-                            desc: dep.source || '-'
-                        });
-                    });
-                }
+                //         savingsAllocations.push({
+                //             type: 'deposit',
+                //             date: dep.date,
+                //             account: 'Yucho',
+                //             fund: fundName,
+                //             amount: dep.amount,
+                //             desc: dep.source || '-'
+                //         });
+                //     });
+                // }
                 
                 // Sort by date
                 savingsAllocations.sort((a, b) => a.date.localeCompare(b.date));
