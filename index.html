@@ -5254,7 +5254,7 @@
                 
                 html += '<div style="background:#e3f2fd;padding:20px;border-radius:10px;text-align:center;">';
                 html += '<h3 style="color:#667eea;margin-bottom:10px;">Savings Rate</h3>';
-                html += '<div style="font-size:24px;font-weight:bold;">' + (income > 0 ? Math.round((totalSavings / income) * 100) : 0) + '%</div>';
+                html += '<div style="font-size:24px;font-weight:bold;">' + (totalIncome > 0 ? Math.round((totalSavings / totalIncome) * 100) : 0) + '%</div>';
                 html += '</div>';
                 html += '</div>';
                 
