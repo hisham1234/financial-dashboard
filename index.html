@@ -5006,7 +5006,8 @@
                             });
                         }
                         
-                        totalSavings += (income - expenses - expensesFromSavings);
+                        //totalSavings += (income - expenses - expensesFromSavings);
+                        totalSavings += (income - expenses);
                     }
                 }
                 
@@ -5459,7 +5460,7 @@
                 
                 // Summary card
                 html += '<div class="assets-banner" style="background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);">';
-                html += '<div class="assets-label">Total Annual Savings</div>';
+                html += '<div class="assets-label">Annual Salary Savings</div>';
                 html += '<div>¥' + this.fmt(totalAnnual) + '</div>';
                 html += '</div>';
                 
