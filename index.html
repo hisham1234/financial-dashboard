@@ -5255,7 +5255,7 @@
                 
                 html += '<div style="background:#e3f2fd;padding:20px;border-radius:10px;text-align:center;">';
                 html += '<h3 style="color:#667eea;margin-bottom:10px;">Savings Rate</h3>';
-                html += '<div style="font-size:24px;font-weight:bold;">' + (totalIncome > 0 ? Math.round((totalSavings / income) * 100) : 0) + '%</div>';
+                html += '<div style="font-size:24px;font-weight:bold;">' + (totalIncome > 0 ? Math.round((totalSavings / totalIncome) * 100) : 0) + '%</div>';
                 html += '</div>';
                 html += '</div>';
                 
@@ -5271,7 +5271,6 @@
                 html += '</div>';
                 html += '<div style="font-size:18px;font-weight:bold;color:#43e97b;">¥' + this.fmt(totalIncome) + '</div>';
                 html += '</div>';
-                    
                 
                 html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:white;border-radius:8px;margin-bottom:10px;border-left:4px solid #f5576c;">';
                 html += '<div><strong>Mizuho Expenses</strong></div>';
