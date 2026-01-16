@@ -5116,7 +5116,7 @@
             renderMonthlySavings: function() {
                 const d = this.data[this.month];
                 const totalSavings = this.calculateMonthlySavings();
-                const savingsByFund = this.getSavingsByFund(this.month);
+                //const savingsByFund = this.getSavingsByFund(this.month);
                 
                 let html = '<div class="section"><div class="section-title">💰 Monthly Savings Report - ' + this.month + '</div>';
                 
@@ -5164,7 +5164,8 @@
                     });
                 }
                 
-                const totalExpenses = mizuhoExpenses + expensesFromSavings;
+                //const totalExpenses = mizuhoExpenses + expensesFromSavings;
+                const totalExpenses = mizuhoExpenses ;
                 
                 html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:20px 0;">';
                 html += '<div style="background:#e8f5e9;padding:20px;border-radius:10px;text-align:center;">';
@@ -5173,10 +5174,14 @@
                 html += '</div>';
                 
                 html += '<div style="background:#ffebee;padding:20px;border-radius:10px;text-align:center;">';
-                html += '<h3 style="color:#f5576c;margin-bottom:10px;">Total Expenses</h3>';
-                html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(totalExpenses) + '</div>';
-                html += '<div style="font-size:12px;color:#999;margin-top:5px;">Mizuho: ¥' + this.fmt(mizuhoExpenses) + '</div>';
-                html += '<div style="font-size:12px;color:#999;">From Savings: ¥' + this.fmt(expensesFromSavings) + '</div>';
+                html += '<h3 style="color:#f5576c;margin-bottom:10px;">Mizuho Expenses</h3>';
+                html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(mizuhoExpenses) + '</div>';
+                html += '</div>';
+
+                html += '<div style="background:#fff3cd;padding:20px;border-radius:10px;text-align:center;">';
+                html += '<h3 style="color:#856404;margin-bottom:10px;">Expenses from Savings Funds</h3>';
+                html += '<div style="font-size:24px;font-weight:bold;">¥' + this.fmt(expensesFromSavings) + '</div>';
+                html += '<div style="font-size:11px;color:#666;margin-top:5px;">See "Total Expense Overview" for details</div>';
                 html += '</div>';
                 
                 html += '<div style="background:#e3f2fd;padding:20px;border-radius:10px;text-align:center;">';
@@ -5199,12 +5204,7 @@
                 html += '<div style="font-size:18px;font-weight:bold;color:#f5576c;">- ¥' + this.fmt(mizuhoExpenses) + '</div>';
                 html += '</div>';
                 
-                if (expensesFromSavings > 0) {
-                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:white;border-radius:8px;margin-bottom:10px;border-left:4px solid #ff9800;">';
-                    html += '<div><strong>Expenses from Savings Funds</strong></div>';
-                    html += '<div style="font-size:18px;font-weight:bold;color:#ff9800;">- ¥' + this.fmt(expensesFromSavings) + '</div>';
-                    html += '</div>';
-                }
+               
                 
                 html += '<div style="height:2px;background:#ddd;margin:15px 0;"></div>';
                 
@@ -5253,19 +5253,8 @@
                             }
                             
                             // Calculate expenses from this fund/account
-                            let expensesFromFund = 0;
-                            if (t.toAccount === 'yucho' && fundIdx !== null) {
-                                if (d.yucho && d.yucho.expenses) {
-                                    d.yucho.expenses.forEach(e => {
-                                        if (e.fundIdx === fundIdx) expensesFromFund += e.amount;
-                                    });
-                                }
-                            } else if (t.toAccount !== 'yucho' && d[t.toAccount]) {
-                                if (d[t.toAccount].expenses) {
-                                    d[t.toAccount].expenses.forEach(e => expensesFromFund += e.amount);
-                                }
-                            }
                             
+
                             savingsAllocations.push({
                                 type: 'transfer',
                                 date: t.date,
@@ -5273,8 +5262,6 @@
                                 fund: toFundName,
                                 fundIdx: fundIdx,
                                 amount: t.amount,
-                                expenses: expensesFromFund,
-                                net: t.amount - expensesFromFund,
                                 desc: t.desc || '-'
                             });
                         }
@@ -5286,22 +5273,12 @@
                     d.yucho.additions.forEach(dep => {
                         const fundName = d.yucho.funds[dep.fundIdx] ? d.yucho.funds[dep.fundIdx].name : 'Unknown Fund';
                         
-                        // Calculate expenses from this fund
-                        let expensesFromFund = 0;
-                        if (d.yucho.expenses) {
-                            d.yucho.expenses.forEach(e => {
-                                if (e.fundIdx === dep.fundIdx) expensesFromFund += e.amount;
-                            });
-                        }
-                        
                         savingsAllocations.push({
                             type: 'deposit',
                             date: dep.date,
                             account: 'Yucho',
                             fund: fundName,
                             amount: dep.amount,
-                            expenses: expensesFromFund,
-                            net: dep.amount - expensesFromFund,
                             desc: dep.source || '-'
                         });
                     });
@@ -5311,10 +5288,8 @@
                 savingsAllocations.sort((a, b) => a.date.localeCompare(b.date));
                 
                 let totalAllocated = 0;
-                let totalExpensesFromSavings = 0;
                 savingsAllocations.forEach(s => {
                     totalAllocated += s.amount;
-                    totalExpensesFromSavings += s.expenses;
                 });
                 
                 // Show breakdown
@@ -5347,22 +5322,6 @@
                         html += '</div>';
                         html += '</div>';
                         
-                        // If there are expenses from this fund, show them
-                        if (s.expenses > 0) {
-                            html += '<div style="background:#fff3cd;padding:10px;border-radius:5px;margin-top:8px;">';
-                            html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">';
-                            html += '<div style="color:#856404;">⚠️ Expenses from this fund</div>';
-                            html += '<div style="font-weight:600;color:#f5576c;">- ¥' + this.fmt(s.expenses) + '</div>';
-                            html += '</div>';
-                            html += '</div>';
-                            
-                            // Net savings
-                            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed #ddd;">';
-                            html += '<div style="font-size:13px;font-weight:600;color:#666;">Net Saved in this fund</div>';
-                            html += '<div style="font-size:14px;font-weight:bold;color:' + (s.net >= 0 ? '#43e97b' : '#f5576c') + ';">¥' + this.fmt(s.net) + '</div>';
-                            html += '</div>';
-                        }
-                        
                         html += '</div>';
                     });
                     
@@ -5375,21 +5334,6 @@
                     html += '<div style="font-size:18px;font-weight:bold;color:#43e97b;">¥' + this.fmt(totalAllocated) + '</div>';
                     html += '</div>';
                     
-                    if (totalExpensesFromSavings > 0) {
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
-                        html += '<div style="font-weight:600;">Total Spent from Savings</div>';
-                        html += '<div style="font-size:18px;font-weight:bold;color:#f5576c;">- ¥' + this.fmt(totalExpensesFromSavings) + '</div>';
-                        html += '</div>';
-                        
-                        html += '<div style="height:2px;background:#ddd;margin:10px 0;"></div>';
-                        
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-                        html += '<div style="font-weight:600;">Net Remaining in Savings</div>';
-                        html += '<div style="font-size:20px;font-weight:bold;color:#43e97b;">¥' + this.fmt(totalAllocated - totalExpensesFromSavings) + '</div>';
-                        html += '</div>';
-                    }
-                    
-                    html += '</div>';
                 } else {
                     html += '<div style="padding:20px;background:white;border-radius:8px;text-align:center;color:#999;">No transfers to savings this month</div>';
                 }
@@ -5411,7 +5355,7 @@
                 
                 // Simple bar chart visualization
                 html += '<div style="margin:30px 0;">';
-                html += '<h3 style="color:#333;margin-bottom:15px;">💰 Income vs Expenses</h3>';
+                html += '<h3 style="color:#333;margin-bottom:15px;">💰 Income vs Mizuho Expenses</h3>';
                 html += '<div style="background:#f5f5f5;padding:20px;border-radius:10px;">';
                 
                 const maxAmount = Math.max(income, totalExpenses);
@@ -5430,23 +5374,6 @@
                 
                 html += '</div></div>';
                 
-                // Savings by Fund/Account (with expenses deducted)
-                if (savingsByFund.length > 0) {
-                    html += '<div class="section"><div class="section-title">📊 Net Savings by Fund/Account (After Expenses)</div>';
-                    html += '<div class="table-container"><table><thead><tr><th>Account</th><th>Fund</th><th>Deposits/Transfers</th><th>Expenses</th><th>Net Savings</th></tr></thead><tbody>';
-                    
-                    savingsByFund.forEach(item => {
-                        html += '<tr>';
-                        html += '<td>' + item.account + '</td>';
-                        html += '<td>' + item.fund + '</td>';
-                        html += '<td style="color:#43e97b;">¥' + this.fmt(item.deposits) + '</td>';
-                        html += '<td style="color:#f5576c;">¥' + this.fmt(item.expenses) + '</td>';
-                        html += '<td style="font-weight:bold;color:' + (item.net >= 0 ? '#43e97b' : '#f5576c') + ';">¥' + this.fmt(item.net) + '</td>';
-                        html += '</tr>';
-                    });
-                    
-                    html += '</tbody></table></div></div>';
-                }
                 
                 html += '</div>';
                 document.getElementById('content').innerHTML = html;
