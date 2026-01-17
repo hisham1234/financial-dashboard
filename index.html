@@ -2169,6 +2169,51 @@
                 html += '</tr>';
                 
                 html += '</tbody></table></div></div>';
+
+                html += '</tbody></table></div></div>';
+
+                // Calculate monthly balance (current month income only, excluding previous balance)
+                let currentMonthIncome = d.salary;
+                if (d.additionalIncome) {
+                    d.additionalIncome.forEach(inc => currentMonthIncome += inc.amount);
+                }
+
+                let totalFixedExpenses = 0;
+                for (let cat in d.fixedExp) {
+                    if (d.fixedExp[cat].actual) {
+                        d.fixedExp[cat].actual.forEach(e => totalFixedExpenses += e.amount);
+                    }
+                }
+
+                let totalExtraExpenses = 0;
+                if (d.extras) {
+                    d.extras.forEach(e => totalExtraExpenses += e.amount);
+                }
+
+                //let transfersOut = 0;
+                //let transfersIn = 0;
+                if (d.transfers) {
+                    d.transfers.forEach(t => {
+                        if (t.type === 'out') transfersOut += t.amount;
+                        else transfersIn += t.amount;
+                    });
+                }
+
+                const monthlyBalance = currentMonthIncome - totalFixedExpenses - totalExtraExpenses - transfersOut + transfersIn;
+
+                // Display monthly balance banner
+                html += '<div class="assets-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-bottom: 20px;">';
+                html += '<div class="assets-label">💰 MONTHLY BALANCE (Current Month Income Only)</div>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                html += '<div style="font-size: 32px; font-weight: bold;">¥' + this.fmt(monthlyBalance) + '</div>';
+                html += '<div style="font-size: 14px; opacity: 0.9;">';
+                html += 'Income: ¥' + this.fmt(currentMonthIncome) + ' - ';
+                html += 'Expenses: ¥' + this.fmt(totalFixedExpenses + totalExtraExpenses) + ' - ';
+                html += 'Net Transfers: ¥' + this.fmt(transfersOut - transfersIn);
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+                // **END OF ADDITION**
                 
                 // Transfer History
                 html += '<div class="section"><div class="section-title">💸 Transfer History</div>';
