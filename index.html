@@ -2337,7 +2337,17 @@
                         html += '</tr>';
                     });
                 }
+                // Calculate total extra expenses
+                let totalExtras = 0;
+                if (d.extras) {
+                    d.extras.forEach(e => totalExtras += e.amount);
+                }
                 
+                html += '<tr class="total-row">';
+                html += '<td><strong>Total Extra Expenses</strong></td>';
+                html += '<td><strong>¥' + this.fmt(totalExtras) + '</strong></td>';
+                html += '<td></td>';
+                html += '</tr>';
                 // Add new extra expense form
                 html += '<tr class="inline-add-row">';
                 html += '<td><input type="date" id="newExtraDate" value="' + new Date().toISOString().split('T')[0] + '"></td>';
