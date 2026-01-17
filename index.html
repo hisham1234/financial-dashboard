@@ -3926,43 +3926,73 @@
             },
             
             saveEditFundName: function() {
-                const newName = document.getElementById('editFundNameInput').value.trim();
-                
-                if (!newName) {
-                    this.msg('⚠️ Please enter a fund name', true);
-                    return;
+    const newName = document.getElementById('editFundNameInput').value.trim();
+    
+    if (!newName) {
+        this.msg('⚠️ Please enter a fund name', true);
+        return;
+    }
+    
+    if (newName === this.editingFundOriginalName) {
+        this.closeEditFundNameModal();
+        return;
+    }
+    
+    // Check if name already exists in current month
+    const exists = this.data[this.month].yucho.funds.find((f, idx) => 
+        f.name === newName && idx !== this.editingFundIndex
+    );
+    if (exists) {
+        this.msg('⚠️ A fund with this name already exists', true);
+        return;
+    }
+    
+    // **FIX: Update fund name in ALL months**
+    for (let monthKey in this.data) {
+        if (!this.data[monthKey].yucho || !this.data[monthKey].yucho.funds) continue;
+        
+        // Update fund name
+        if (this.data[monthKey].yucho.funds[this.editingFundIndex]) {
+            this.data[monthKey].yucho.funds[this.editingFundIndex].name = newName;
+        }
+        
+        // Update fund name in all expenses
+        if (this.data[monthKey].yucho.expenses) {
+            this.data[monthKey].yucho.expenses.forEach(e => {
+                if (e.fundIdx === this.editingFundIndex) {
+                    e.fundName = newName;
                 }
-                
-                if (newName === this.editingFundOriginalName) {
-                    this.closeEditFundNameModal();
-                    return;
+            });
+        }
+        
+        // Update fund name in all additions
+        if (this.data[monthKey].yucho.additions) {
+            this.data[monthKey].yucho.additions.forEach(a => {
+                if (a.fundIdx === this.editingFundIndex) {
+                    a.fundName = newName;
                 }
-                
-                // Check if name already exists
-                const exists = this.data[this.month].yucho.funds.find((f, idx) => 
-                    f.name === newName && idx !== this.editingFundIndex
-                );
-                if (exists) {
-                    this.msg('⚠️ A fund with this name already exists', true);
-                    return;
+            });
+        }
+        
+        // Update fund name in transfers
+        if (this.data[monthKey].yucho.transfers) {
+            this.data[monthKey].yucho.transfers.forEach(t => {
+                if (t.fundIdx === this.editingFundIndex) {
+                    if (t.type === 'in') {
+                        t.fromFundName = newName;
+                    } else {
+                        t.toFundName = newName;
+                    }
                 }
-                
-                this.data[this.month].yucho.funds[this.editingFundIndex].name = newName;
-                
-                // Update fund name in all expenses
-                if (this.data[this.month].yucho.expenses) {
-                    this.data[this.month].yucho.expenses.forEach(e => {
-                        if (e.fundIdx === this.editingFundIndex) {
-                            e.fundName = newName;
-                        }
-                    });
-                }
-                
-                this.render();
-                this.msg('✅ Fund name updated to: ' + newName);
-                this.saveData();
-                this.closeEditFundNameModal();
-            },
+            });
+        }
+    }
+    
+    this.render();
+    this.msg('✅ Fund name updated in all months to: ' + newName);
+    this.saveData();
+    this.closeEditFundNameModal();
+},
 
             //     addNewFund: function() {
             //     const nameEl = document.getElementById('newFundName');
@@ -4061,98 +4091,111 @@
                 this.saveData();
             },
             deleteFund: function(fundIndex) {
-                const fundName = this.data[this.month].yucho.funds[fundIndex].name;
-                
-                // Check if fund has any transactions
-                let hasTransactions = false;
-                
-                if (this.data[this.month].yucho.expenses) {
-                    hasTransactions = this.data[this.month].yucho.expenses.some(e => e.fundIdx === fundIndex);
-                }
-                
-                if (this.data[this.month].yucho.additions) {
-                    hasTransactions = hasTransactions || this.data[this.month].yucho.additions.some(a => a.fundIdx === fundIndex);
-                }
-                
-                if (this.data[this.month].yucho.transfers) {
-                    hasTransactions = hasTransactions || this.data[this.month].yucho.transfers.some(t => t.fundIdx === fundIndex);
-                }
-                
-                this.showDeleteFundModal(fundIndex, fundName, hasTransactions);
-            },
+    const fundName = this.data[this.month].yucho.funds[fundIndex].name;
+    
+    // Check if fund has any transactions IN ANY MONTH
+    let hasTransactions = false;
+    
+    for (let monthKey in this.data) {
+        if (!this.data[monthKey].yucho) continue;
+        
+        if (this.data[monthKey].yucho.expenses) {
+            hasTransactions = this.data[monthKey].yucho.expenses.some(e => e.fundIdx === fundIndex);
+        }
+        
+        if (!hasTransactions && this.data[monthKey].yucho.additions) {
+            hasTransactions = this.data[monthKey].yucho.additions.some(a => a.fundIdx === fundIndex);
+        }
+        
+        if (!hasTransactions && this.data[monthKey].yucho.transfers) {
+            hasTransactions = this.data[monthKey].yucho.transfers.some(t => t.fundIdx === fundIndex);
+        }
+        
+        if (hasTransactions) break; // Found transactions, no need to check more
+    }
+    
+    this.showDeleteFundModal(fundIndex, fundName, hasTransactions);
+},
+
+showDeleteFundModal: function(fundIndex, fundName, hasTransactions) {
+    let modal = document.getElementById('deleteFundModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'deleteFundModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:500px;">
+                <span class="close" onclick="app.closeDeleteFundModal()">&times;</span>
+                <div class="modal-header">⚠️ Delete Fund</div>
+                <p id="deleteFundMsg" style="margin:20px 0;"></p>
+                <button class="btn btn-delete" onclick="app.confirmDeleteFund(true)">✓ Yes, Delete</button>
+                <button class="btn" onclick="app.confirmDeleteFund(false)">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    let message = 'Are you sure you want to delete the fund "' + fundName + '"?\n\nThis will delete it from ALL months.';
+    if (hasTransactions) {
+        message += '\n\n⚠️ WARNING: This fund has transaction history in one or more months. Deleting it will remove all associated transactions.';
+    }
+    
+    document.getElementById('deleteFundMsg').textContent = message;
+    document.getElementById('deleteFundMsg').style.whiteSpace = 'pre-line';
+    this.deletingFundIndex = fundIndex;
+    modal.style.display = 'block';
+},
+
+closeDeleteFundModal: function() {
+    const modal = document.getElementById('deleteFundModal');
+    if (modal) modal.style.display = 'none';
+    this.deletingFundIndex = null;
+},
+
+    confirmDeleteFund: function(confirmed) {
+    if (confirmed && this.deletingFundIndex !== null && this.deletingFundIndex !== undefined) {
+        const fundIndex = this.deletingFundIndex;
+        const fundName = this.data[this.month].yucho.funds[fundIndex].name;
+        
+        // **FIX: Delete the fund from ALL months**
+        for (let monthKey in this.data) {
+            if (!this.data[monthKey].yucho || !this.data[monthKey].yucho.funds) continue;
             
-            showDeleteFundModal: function(fundIndex, fundName, hasTransactions) {
-                let modal = document.getElementById('deleteFundModal');
-                if (!modal) {
-                    modal = document.createElement('div');
-                    modal.id = 'deleteFundModal';
-                    modal.className = 'modal';
-                    modal.innerHTML = `
-                        <div class="modal-content" style="max-width:500px;">
-                            <span class="close" onclick="app.closeDeleteFundModal()">&times;</span>
-                            <div class="modal-header">⚠️ Delete Fund</div>
-                            <p id="deleteFundMsg" style="margin:20px 0;"></p>
-                            <button class="btn btn-delete" onclick="app.confirmDeleteFund(true)">✓ Yes, Delete</button>
-                            <button class="btn" onclick="app.confirmDeleteFund(false)">Cancel</button>
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
-                }
-                
-                let message = 'Are you sure you want to delete the fund "' + fundName + '"?';
-                if (hasTransactions) {
-                    message += '\n\n⚠️ WARNING: This fund has transaction history. Deleting it will remove all associated transactions.';
-                }
-                
-                document.getElementById('deleteFundMsg').textContent = message;
-                document.getElementById('deleteFundMsg').style.whiteSpace = 'pre-line';
-                this.deletingFundIndex = fundIndex;
-                modal.style.display = 'block';
-            },
+            // Remove the fund at this index
+            if (this.data[monthKey].yucho.funds[fundIndex]) {
+                this.data[monthKey].yucho.funds.splice(fundIndex, 1);
+            }
             
-            closeDeleteFundModal: function() {
-                const modal = document.getElementById('deleteFundModal');
-                if (modal) modal.style.display = 'none';
-                this.deletingFundIndex = null;
-            },
+            // Remove associated transactions
+            if (this.data[monthKey].yucho.expenses) {
+                this.data[monthKey].yucho.expenses = this.data[monthKey].yucho.expenses.filter(e => e.fundIdx !== fundIndex);
+                // Adjust indices for remaining expenses
+                this.data[monthKey].yucho.expenses.forEach(e => {
+                    if (e.fundIdx > fundIndex) e.fundIdx--;
+                });
+            }
             
-            confirmDeleteFund: function(confirmed) {
-                if (confirmed && this.deletingFundIndex !== null && this.deletingFundIndex !== undefined) {
-                    const fundIndex = this.deletingFundIndex;
-                    const fundName = this.data[this.month].yucho.funds[fundIndex].name;
-                    
-                    // Remove the fund
-                    this.data[this.month].yucho.funds.splice(fundIndex, 1);
-                    
-                    // Remove associated transactions
-                    if (this.data[this.month].yucho.expenses) {
-                        this.data[this.month].yucho.expenses = this.data[this.month].yucho.expenses.filter(e => e.fundIdx !== fundIndex);
-                        // Adjust indices for remaining expenses
-                        this.data[this.month].yucho.expenses.forEach(e => {
-                            if (e.fundIdx > fundIndex) e.fundIdx--;
-                        });
-                    }
-                    
-                    if (this.data[this.month].yucho.additions) {
-                        this.data[this.month].yucho.additions = this.data[this.month].yucho.additions.filter(a => a.fundIdx !== fundIndex);
-                        this.data[this.month].yucho.additions.forEach(a => {
-                            if (a.fundIdx > fundIndex) a.fundIdx--;
-                        });
-                    }
-                    
-                    if (this.data[this.month].yucho.transfers) {
-                        this.data[this.month].yucho.transfers = this.data[this.month].yucho.transfers.filter(t => t.fundIdx !== fundIndex);
-                        this.data[this.month].yucho.transfers.forEach(t => {
-                            if (t.fundIdx > fundIndex) t.fundIdx--;
-                        });
-                    }
-                    
-                    this.render();
-                    this.msg('✅ Fund deleted: ' + fundName);
-                    this.saveData();
-                }
-                this.closeDeleteFundModal();
-            },
+            if (this.data[monthKey].yucho.additions) {
+                this.data[monthKey].yucho.additions = this.data[monthKey].yucho.additions.filter(a => a.fundIdx !== fundIndex);
+                this.data[monthKey].yucho.additions.forEach(a => {
+                    if (a.fundIdx > fundIndex) a.fundIdx--;
+                });
+            }
+            
+            if (this.data[monthKey].yucho.transfers) {
+                this.data[monthKey].yucho.transfers = this.data[monthKey].yucho.transfers.filter(t => t.fundIdx !== fundIndex);
+                this.data[monthKey].yucho.transfers.forEach(t => {
+                    if (t.fundIdx > fundIndex) t.fundIdx--;
+                });
+            }
+        }
+        
+        this.render();
+        this.msg('✅ Fund deleted from all months: ' + fundName);
+        this.saveData();
+    }
+    this.closeDeleteFundModal();
+    },
 
             // Standard Account Functions (SLSenfin, Rakuten, Med & Fun)
             editStandardAccountBalance: function(account, currentBalance) {
