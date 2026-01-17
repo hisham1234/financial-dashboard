@@ -2190,8 +2190,8 @@
                     d.extras.forEach(e => totalExtraExpenses += e.amount);
                 }
 
-                 transfersOut = 0;
-                 transfersIn = 0;
+                //let transfersOut = 0;
+                //let transfersIn = 0;
                 if (d.transfers) {
                     d.transfers.forEach(t => {
                         if (t.type === 'out') transfersOut += t.amount;
