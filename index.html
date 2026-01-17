@@ -2211,7 +2211,21 @@
                         html += '</tr>';
                     });
                 }
+                // Calculate transfer totals
+                let transfersOut = 0;
+                let transfersIn = 0;
+                if (d.transfers) {
+                    d.transfers.forEach(t => {
+                        if (t.type === 'out') transfersOut += t.amount;
+                        else transfersIn += t.amount;
+                    });
+                }
                 
+                html += '<tr class="total-row">';
+                html += '<td colspan="2"><strong>Totals</strong></td>';
+                html += '<td><strong>Out: ¥' + this.fmt(transfersOut) + ' | In: ¥' + this.fmt(transfersIn) + '</strong></td>';
+                html += '<td colspan="4" style="color:#667eea;"><strong>Net: ¥' + this.fmt(transfersIn - transfersOut) + '</strong></td>';
+                html += '</tr>';
                 html += '</tbody></table></div></div>';
                 
                 // Fixed expenses
