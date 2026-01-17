@@ -1535,7 +1535,7 @@
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
-                        
+                        console.log('📦 Parsed data:', parsed);
                         // Check if this is cache-only data (not from Drive)
                         if (parsed.isCacheOnly) {
                             console.warn('⚠️ Loading from CACHE - Drive is the source of truth');
@@ -1544,6 +1544,8 @@
                         
                         if (parsed.data) {
                             this.data = parsed.data;
+                            console.log('✅ Data loaded, months:', Object.keys(this.data));
+                            console.log('✅ Current month Yucho funds:', this.data[this.month]?.yucho?.funds);
                             // Ensure all months have proper structure
                             for (let monthKey in this.data) {
                                 this.validateMonthStructure(monthKey);
