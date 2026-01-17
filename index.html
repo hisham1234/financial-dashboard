@@ -3990,9 +3990,9 @@
                     this.msg('⚠️ A fund with this name already exists', true);
                     return;
                 }
-                debugger;
+                
                 this.data[this.month].yucho.funds.push({
-                    
+                    id: Date.now(), // Add unique ID
                     name: name,
                     balance: balance || 0
                 });
