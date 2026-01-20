@@ -4547,6 +4547,69 @@ closeDeleteFundModal: function() {
                 this.saveData();
             },
 
+            filterSubcategoryExpenses: function() {
+                const selectedSubcat = document.getElementById('subcategoryFilter').value;
+                const detailsContainer = document.getElementById('subcategoryDetails');
+                
+                if (!selectedSubcat || !window.subcategoryExpensesData) {
+                    detailsContainer.style.display = 'none';
+                    return;
+                }
+                
+                const data = window.subcategoryExpensesData[selectedSubcat];
+                if (!data) {
+                    detailsContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Build the details HTML
+                let html = '';
+                
+                // Summary card
+                html += '<div style="background:white;padding:20px;border-radius:10px;margin-bottom:20px;border-left:4px solid #667eea;">';
+                html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;">';
+                
+                html += '<div>';
+                html += '<div style="font-size:12px;color:#999;margin-bottom:5px;">Total Spent</div>';
+                html += '<div style="font-size:24px;font-weight:bold;color:#667eea;">¥' + this.fmt(data.total) + '</div>';
+                html += '</div>';
+                
+                html += '<div>';
+                html += '<div style="font-size:12px;color:#999;margin-bottom:5px;">Number of Expenses</div>';
+                html += '<div style="font-size:24px;font-weight:bold;color:#667eea;">' + data.count + '</div>';
+                html += '</div>';
+                
+                const avgAmount = data.count > 0 ? data.total / data.count : 0;
+                html += '<div>';
+                html += '<div style="font-size:12px;color:#999;margin-bottom:5px;">Average per Expense</div>';
+                html += '<div style="font-size:24px;font-weight:bold;color:#667eea;">¥' + this.fmt(avgAmount) + '</div>';
+                html += '</div>';
+                
+                html += '</div></div>';
+                
+                // Detailed list
+                html += '<div style="background:white;padding:20px;border-radius:10px;">';
+                html += '<h4 style="color:#333;margin-bottom:15px;">📋 Detailed Breakdown</h4>';
+                html += '<div class="table-container"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Description</th></tr></thead><tbody>';
+                
+                // Sort by date
+                data.items.sort((a, b) => a.date.localeCompare(b.date));
+                
+                data.items.forEach(item => {
+                    html += '<tr>';
+                    html += '<td>' + item.date + '</td>';
+                    html += '<td>' + item.category + '</td>';
+                    html += '<td style="font-weight:600;">¥' + this.fmt(item.amount) + '</td>';
+                    html += '<td>' + item.desc + '</td>';
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table></div></div>';
+                
+                detailsContainer.innerHTML = html;
+                detailsContainer.style.display = 'block';
+            },
+
             // Mizuho Income Functions
             editMizuhoSalary: function(currentSalary) {
                 if (this.editingCell) return;
@@ -6018,6 +6081,65 @@ closeDeleteFundModal: function() {
                 });
 
                 html += '</div></div>';
+
+                // **ADD SUBCATEGORY ANALYSIS SECTION HERE**
+                    // Collect all subcategory expenses
+                    let subcategoryExpenses = {};
+                    if (d.mizuho && d.mizuho.fixedExp) {
+                        for (let cat in d.mizuho.fixedExp) {
+                            if (d.mizuho.fixedExp[cat].actual) {
+                                d.mizuho.fixedExp[cat].actual.forEach(exp => {
+                                    if (exp.subcategory) {
+                                        if (!subcategoryExpenses[exp.subcategory]) {
+                                            subcategoryExpenses[exp.subcategory] = {
+                                                total: 0,
+                                                count: 0,
+                                                items: []
+                                            };
+                                        }
+                                        subcategoryExpenses[exp.subcategory].total += exp.amount;
+                                        subcategoryExpenses[exp.subcategory].count++;
+                                        subcategoryExpenses[exp.subcategory].items.push({
+                                            date: exp.date,
+                                            amount: exp.amount,
+                                            category: cat,
+                                            desc: exp.desc || '-'
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Only show if there are subcategories
+                    if (Object.keys(subcategoryExpenses).length > 0) {
+                        html += '<div class="section"><div class="section-title">🏷️ Subcategory Expense Analysis</div>';
+                        html += '<div style="background:#f8f9fa;padding:20px;border-radius:10px;">';
+                        
+                        // Dropdown to select subcategory
+                        html += '<div style="margin-bottom:20px;">';
+                        html += '<label style="font-weight:600;color:#333;margin-bottom:10px;display:block;">Select Subcategory:</label>';
+                        html += '<select id="subcategoryFilter" onchange="app.filterSubcategoryExpenses()" style="width:100%;max-width:300px;padding:10px;font-size:14px;border-radius:5px;border:1px solid #ddd;">';
+                        html += '<option value="">-- Choose a subcategory --</option>';
+                        
+                        // Sort subcategories by total amount (highest first)
+                        const sortedSubcats = Object.entries(subcategoryExpenses).sort((a, b) => b[1].total - a[1].total);
+                        sortedSubcats.forEach(([subcat, data]) => {
+                            html += '<option value="' + subcat + '">' + subcat + ' (¥' + this.fmt(data.total) + ')</option>';
+                        });
+                        html += '</select>';
+                        html += '</div>';
+                        
+                        // Container for subcategory details (initially hidden)
+                        html += '<div id="subcategoryDetails" style="display:none;"></div>';
+                        
+                        html += '</div></div>';
+                        
+                        // Store subcategory data for filtering
+                        window.subcategoryExpensesData = subcategoryExpenses;
+                    }
+                    // **END OF ADDITION**
+
 
                 // AI-Powered Insights & Suggestions
                 html += '<div class="section"><div class="section-title">💡 Intelligent Insights & Suggestions</div>';
