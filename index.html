@@ -1263,6 +1263,10 @@
                 <div class="summary-label">Annual Savings</div>
                 <div class="summary-value">¥<span id="annualSavings">0</span></div>
             </div>
+            <div class="summary-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);" onclick="app.showAnnualExpenseOverview()">
+                <div class="summary-label">Annual Expenses (All Accounts)</div>
+                <div class="summary-value">¥<span id="annualExpensesAll">0</span></div>
+            </div>
         </div>
 
         <div id="content"></div>
@@ -1886,6 +1890,10 @@
                 // Calculate annual savings
                 const annualSavings = this.calculateAnnualSavings();
                 document.getElementById('annualSavings').textContent = this.fmt(annualSavings);
+
+                const annualExpensesAll = this.calculateAnnualExpensesAll();
+                document.getElementById('annualExpensesAll').textContent = this.fmt(annualExpensesAll);
+
             },
 
             updateCustomAccountCards: function() {
@@ -5392,6 +5400,12 @@ closeDeleteFundModal: function() {
                 this.render();
             },
 
+            showAnnualExpenseOverview: function() {
+            this.acc = 'annual-expense-overview';
+            document.getElementById('accountSelect').value = 'annual-expense-overview';
+            this.render();
+            },
+
             renderMonthlySavings: function() {
                 const d = this.data[this.month];
                 const totalSavings = this.calculateMonthlySavings();
@@ -5956,6 +5970,55 @@ closeDeleteFundModal: function() {
     
     html += '</div>';
     document.getElementById('content').innerHTML = html;
+},
+
+calculateAnnualExpensesAll: function() {
+    const currentYear = this.month.split('-')[0];
+    let totalExpenses = 0;
+    
+    for (let monthKey in this.data) {
+        if (monthKey.startsWith(currentYear)) {
+            const d = this.data[monthKey];
+            if (!d) continue;
+            
+            // Mizuho expenses
+            if (d.mizuho) {
+                if (d.mizuho.fixedExp) {
+                    for (let cat in d.mizuho.fixedExp) {
+                        if (d.mizuho.fixedExp[cat].actual) {
+                            d.mizuho.fixedExp[cat].actual.forEach(e => totalExpenses += e.amount);
+                        }
+                    }
+                }
+                if (d.mizuho.extras) {
+                    d.mizuho.extras.forEach(e => totalExpenses += e.amount);
+                }
+            }
+            
+            // Yucho expenses
+            if (d.yucho && d.yucho.expenses) {
+                d.yucho.expenses.forEach(e => totalExpenses += e.amount);
+            }
+            
+            // Other accounts
+            ['slsenfin', 'rakuten', 'medfun'].forEach(acc => {
+                if (d[acc] && d[acc].expenses) {
+                    d[acc].expenses.forEach(e => totalExpenses += e.amount);
+                }
+            });
+            
+            // Custom accounts
+            if (this.customAccounts) {
+                this.customAccounts.forEach(customAcc => {
+                    if (d[customAcc.id] && d[customAcc.id].expenses) {
+                        d[customAcc.id].expenses.forEach(e => totalExpenses += e.amount);
+                    }
+                });
+            }
+        }
+    }
+    
+    return totalExpenses;
 },
 
 renderAnnualExpenseOverview: function() {
