@@ -1858,16 +1858,16 @@
                     document.getElementById('totalExpenses').textContent = this.fmt(totalExpenses);
 
                     // Calculate and display expense ratio
-                    if (d.mizuho) {
-                        const income = (d.mizuho.salary || 0) + (d.mizuho.prevBal || 0);
-                        let additionalIncome = 0;
-                        if (d.mizuho.additionalIncome) {
-                            d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
-                        }
-                        const totalIncome = income + additionalIncome;
-                        const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
-                        document.getElementById('expenseRatio').textContent = '(' + expenseRatio + '%)';
-                    }
+                    // if (d.mizuho) {
+                    //     const income = (d.mizuho.salary || 0) + (d.mizuho.prevBal || 0);
+                    //     let additionalIncome = 0;
+                    //     if (d.mizuho.additionalIncome) {
+                    //         d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
+                    //     }
+                    //     const totalIncome = income + additionalIncome;
+                    //     const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
+                       
+                    // }
 
                     // Calculate total expenses from ALL accounts
                     let totalExpensesAll = totalExpenses; // Start with Mizuho
@@ -6402,7 +6402,7 @@ renderAnnualExpenseOverview: function() {
                 html += '</div>';
 
                 html += '</div>';
-
+                document.getElementById('expenseRatio').textContent = '(' + expenseRatio + '%)';
                 // Category Breakdown with Visual Bars
                 html += '<div class="section"><div class="section-title">📊 Expense Breakdown by Category</div>';
                 html += '<div style="background:#f8f9fa;padding:20px;border-radius:10px;">';
