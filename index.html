@@ -1900,16 +1900,16 @@
                 document.getElementById('monthlySavings').textContent = this.fmt(monthlySavings);
                 
                 // Calculate and display savings rate
-                if (d.mizuho) {
-                    const income = (d.mizuho.salary || 0);
-                    let additionalIncome = 0;
-                    if (d.mizuho.additionalIncome) {
-                        d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
-                    }
-                    const totalIncome = income + additionalIncome;
-                    const savingsRate = totalIncome > 0 ? Math.round((monthlySavings / totalIncome) * 100) : 0;
-                    document.getElementById('savingsRate').textContent = '(' + savingsRate + '%)';
-                }
+                // if (d.mizuho) {
+                //     const income = (d.mizuho.salary || 0);
+                //     let additionalIncome = 0;
+                //     if (d.mizuho.additionalIncome) {
+                //         d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
+                //     }
+                //     const totalIncome = income + additionalIncome;
+                //     const savingsRate = totalIncome > 0 ? Math.round((monthlySavings / totalIncome) * 100) : 0;
+                //     document.getElementById('savingsRate').textContent = '(' + savingsRate + '%)';
+                // }
 
                 const income = d.mizuho.salary || 0;
                                // const income = (d.mizuho.salary || 0);
