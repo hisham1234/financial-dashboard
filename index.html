@@ -1913,7 +1913,7 @@
 
                 const income = d.mizuho.salary || 0;
                 const expenseRatio = income > 0 ? (totalExpenses / income) * 100 : 0;
-                
+
                 document.getElementById('expenseRatio').textContent = '(' + Math.round(expenseRatio) + '%)';
                 // Calculate annual savings
                 const annualSavings = this.calculateAnnualSavings();
@@ -6357,7 +6357,15 @@ renderAnnualExpenseOverview: function() {
                 }
 
                 const income = d.mizuho.salary || 0;
-                const expenseRatio = income > 0 ? (totalExpenses / income) * 100 : 0;
+
+               // const income = (d.mizuho.salary || 0);
+                    let additionalIncome = 0;
+                    if (d.mizuho.additionalIncome) {
+                        d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
+                    }
+                    const totalIncome = income + additionalIncome;
+
+                const expenseRatio = income > 0 ? (totalExpenses / totalIncome) * 100 : 0;
 
                 // Summary Banner
                 html += '<div class="assets-banner" style="background: linear-gradient(135deg, #f5576c 0%, #dc3b50 100%);">';
