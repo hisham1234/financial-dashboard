@@ -1249,7 +1249,7 @@
             <div id="customAccountCards"></div>
             <div class="summary-card" style="background: linear-gradient(135deg, #f5576c 0%, #dc3b50 100%);" onclick="app.showExpenseAnalysis()">
                 <div class="summary-label">Total Expense (Mizuho)</div>
-                <div class="summary-value">¥<span id="totalExpenses">0</span></div>
+                <div class="summary-value">¥<span id="totalExpenses">0</span> <span id="expenseRatio" style="font-size: 14px; opacity: 0.9;"></span></div>
             </div>
             <div class="summary-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);" onclick="app.showTotalExpenseOverview()">
                 <div class="summary-label">Total Expense (All Accounts)</div>
@@ -1856,6 +1856,18 @@
                         }
                     }
                     document.getElementById('totalExpenses').textContent = this.fmt(totalExpenses);
+
+                    // Calculate and display expense ratio
+                    if (d.mizuho) {
+                        const income = (d.mizuho.salary || 0) + (d.mizuho.prevBal || 0);
+                        let additionalIncome = 0;
+                        if (d.mizuho.additionalIncome) {
+                            d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
+                        }
+                        const totalIncome = income + additionalIncome;
+                        const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
+                        document.getElementById('expenseRatio').textContent = '(' + expenseRatio + '%)';
+                    }
 
                     // Calculate total expenses from ALL accounts
                     let totalExpensesAll = totalExpenses; // Start with Mizuho
