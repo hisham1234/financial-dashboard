@@ -1257,7 +1257,7 @@
             </div>
             <div class="summary-card" style="background: linear-gradient(135deg, #43e97b 0%, #38c968 100%);" onclick="app.showMonthlySavings()">
                 <div class="summary-label">Monthly Savings</div>
-                <div class="summary-value">¥<span id="monthlySavings">0</span></div>
+                <div class="summary-value">¥<span id="monthlySavings">0</span> <span id="savingsRate" style="font-size: 14px; opacity: 0.9;"></span></div>
             </div>
             <div class="summary-card" style="background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);" onclick="app.showAnnualSavings()">
                 <div class="summary-label">Annual Savings</div>
@@ -1887,6 +1887,18 @@
                 const monthlySavings = this.calculateMonthlySavings();
                 document.getElementById('monthlySavings').textContent = this.fmt(monthlySavings);
                 
+                // Calculate and display savings rate
+                if (d.mizuho) {
+                    const income = (d.mizuho.salary || 0);
+                    let additionalIncome = 0;
+                    if (d.mizuho.additionalIncome) {
+                        d.mizuho.additionalIncome.forEach(inc => additionalIncome += inc.amount);
+                    }
+                    const totalIncome = income + additionalIncome;
+                    const savingsRate = totalIncome > 0 ? Math.round((monthlySavings / totalIncome) * 100) : 0;
+                    document.getElementById('savingsRate').textContent = '(' + savingsRate + '%)';
+                }
+
                 // Calculate annual savings
                 const annualSavings = this.calculateAnnualSavings();
                 document.getElementById('annualSavings').textContent = this.fmt(annualSavings);
