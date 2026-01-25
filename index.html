@@ -1911,6 +1911,10 @@
                     document.getElementById('savingsRate').textContent = '(' + savingsRate + '%)';
                 }
 
+                const income = d.mizuho.salary || 0;
+                const expenseRatio = income > 0 ? (totalExpenses / income) * 100 : 0;
+                
+                document.getElementById('expenseRatio').textContent = '(' + Math.round(expenseRatio) + '%)';
                 // Calculate annual savings
                 const annualSavings = this.calculateAnnualSavings();
                 document.getElementById('annualSavings').textContent = this.fmt(annualSavings);
@@ -6402,7 +6406,7 @@ renderAnnualExpenseOverview: function() {
                 html += '</div>';
 
                 html += '</div>';
-                document.getElementById('expenseRatio').textContent = '(' + expenseRatio + '%)';
+               
                 // Category Breakdown with Visual Bars
                 html += '<div class="section"><div class="section-title">📊 Expense Breakdown by Category</div>';
                 html += '<div style="background:#f8f9fa;padding:20px;border-radius:10px;">';
