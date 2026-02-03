@@ -1491,8 +1491,7 @@
                                 'Luqman': { budget: 10000, actual: [] },
                                 'Daiso/Laundry': { budget: 5000, actual: [] },
                                 'Highways': { budget: 0, actual: [] },
-                                'Sani': { budget: 10000, actual: [] },
-                                'Extra/Variable Expenses': { budget: 10000, actual: [] }, // NEW LINE - add this
+                                'Sani': { budget: 10000, actual: [] }
                             },
                             extras: [],
                             additionalIncome: [],
@@ -2330,168 +2329,102 @@
                 html += '</tr>';
                 html += '</tbody></table></div></div>';
                 
-                // REPLACE THE ENTIRE FIXED EXPENSES SECTION WITH THIS CODE
-// (From "// Fixed expenses" until "// Extra expenses")
-
                 // Fixed expenses
                 html += '<div class="section"><div class="section-title">📊 Fixed Monthly Expenses</div>';
                 html += '<div class="table-container"><table><thead><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Remaining</th><th>Details</th><th>Quick Add</th></tr></thead><tbody>';
-
+                
                 let totalBudget = 0, totalActual = 0;
-
-                // ✅ CALCULATE actual for Extra/Variable from extras array
-                let extraVariableActual = 0;
-                if (d.extras) {
-                    d.extras.forEach(e => extraVariableActual += e.amount);
-                }
-
-                // Loop through all fixed expense categories
                 for (let cat in d.fixedExp) {
                     const catData = d.fixedExp[cat];
                     const budget = catData.budget;
                     let actual = 0;
-                    
-                    // ✅ For Extra/Variable, use calculated value from extras array
-                    if (cat === 'Extra/Variable Expenses') {
-                        actual = extraVariableActual;
-                    } else {
-                        // For other categories, sum up actual expenses
-                        if (catData.actual) {
-                            catData.actual.forEach(e => actual += e.amount);
-                        }
+                    if (catData.actual) {
+                        catData.actual.forEach(e => actual += e.amount);
                     }
-                    
                     const remaining = budget - actual;
                     totalBudget += budget;
                     totalActual += actual;
                     
-                    // ✅ Special styling for Extra/Variable category
-                    const isExtraCategory = cat === 'Extra/Variable Expenses';
-                    const rowStyle = isExtraCategory ? 'background:#fff9e6;' : '';
-                    
-                    html += '<tr style="' + rowStyle + '"><td>';
+                    html += '<tr><td>';
                     html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
-                    html += '<span style="font-weight:500;">' + cat;
-                    if (isExtraCategory) {
-                        html += ' <span style="font-size:11px;color:#856404;font-weight:normal;">(Auto-calculated from extras below)</span>';
-                    }
-                    html += '</span>';
-                    
-                    // ✅ Don't show delete button for Extra/Variable
-                    if (!isExtraCategory) {
-                        html += '<button class="btn btn-delete btn-small" onclick="app.deleteFixedCategory(\'' + cat + '\')" title="Delete category" style="margin-left:10px;">🗑️</button>';
-                    }
+                    html += '<span style="font-weight:500;">' + cat + '</span>';
+                    html += '<button class="btn btn-delete btn-small" onclick="app.deleteFixedCategory(\'' + cat + '\')" title="Delete category" style="margin-left:10px;">🗑️</button>';
                     html += '</div>';
                     html += '</td>';
-                    
-                    // Budget column - editable
                     html += '<td><span class="editable" onclick="app.editBudget(\'' + cat + '\', ' + budget + ')" title="Click to edit">¥' + this.fmt(budget) + '</span></td>';
-                    
-                    // Actual column
-                    html += '<td>¥' + this.fmt(actual);
-                    if (isExtraCategory) {
-                        html += ' <span style="font-size:10px;color:#856404;">(auto)</span>';
-                    }
-                    html += '</td>';
-                    
-                    // Remaining column
+                    html += '<td>¥' + this.fmt(actual) + '</td>';
                     html += '<td style="color:' + (remaining >= 0 ? '#43e97b' : '#f5576c') + '">¥' + this.fmt(Math.abs(remaining)) + '</td>';
-                    
-                    // Details column
                     html += '<td>';
                     
-                    // ✅ For Extra/Variable, show link to section below
-                    if (isExtraCategory) {
-                        if (extraVariableActual > 0) {
-                            html += '<div style="font-size:11px;color:#856404;font-style:italic;">';
-                            html += '📋 ' + (d.extras ? d.extras.length : 0) + ' expense(s) - manage below';
+                    // Show details of actual expenses
+                    if (catData.actual && catData.actual.length > 0) {
+                        catData.actual.forEach((exp, idx) => {
+                            html += '<div style="font-size:11px;margin:2px 0;display:flex;gap:5px;align-items:center;">';
+                            html += '<span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'date\', \'' + exp.date + '\')" title="Click to edit">' + exp.date + '</span>';
+                            html += ': ¥';
+                            html += '<span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'amount\', ' + exp.amount + ')" title="Click to edit">' + this.fmt(exp.amount) + '</span>';
+                            if (exp.subcategory) html += ' <span class="subcategory-badge">' + exp.subcategory + '</span>';
+                            if (exp.desc) {
+                                html += ' - <span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'desc\', \'' + (exp.desc || '').replace(/'/g, "\\'") + '\')" title="Click to edit">' + exp.desc + '</span>';
+                            }
+                            html += ' <button class="btn btn-delete btn-small" onclick="app.deleteFixedExpenseItem(\'' + cat + '\', ' + idx + ')" style="margin-left:auto;">×</button>';
                             html += '</div>';
-                        } else {
-                            html += '<div style="font-size:11px;color:#999;font-style:italic;">No expenses yet</div>';
-                        }
-                    } else {
-                        // For other categories, show normal details
-                        if (catData.actual && catData.actual.length > 0) {
-                            catData.actual.forEach((exp, idx) => {
-                                html += '<div style="font-size:11px;margin:2px 0;display:flex;gap:5px;align-items:center;">';
-                                html += '<span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'date\', \'' + exp.date + '\')" title="Click to edit">' + exp.date + '</span>';
-                                html += ': ¥';
-                                html += '<span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'amount\', ' + exp.amount + ')" title="Click to edit">' + this.fmt(exp.amount) + '</span>';
-                                if (exp.subcategory) html += ' <span class="subcategory-badge">' + exp.subcategory + '</span>';
-                                if (exp.desc) {
-                                    html += ' - <span class="editable" onclick="app.editExpenseField(this, \'' + cat + '\', ' + idx + ', \'desc\', \'' + (exp.desc || '').replace(/'/g, "\\'") + '\')" title="Click to edit">' + exp.desc + '</span>';
-                                }
-                                html += ' <button class="btn btn-delete btn-small" onclick="app.deleteFixedExpenseItem(\'' + cat + '\', ' + idx + ')" style="margin-left:auto;">×</button>';
-                                html += '</div>';
-                            });
-                        }
+                        });
                     }
                     
                     html += '</td>';
-                    
-                    // Quick Add column
-                    html += '<td>';
-                    // ✅ Don't show Quick Add for Extra/Variable (use section below instead)
-                    if (!isExtraCategory) {
-                        html += '<button class="quick-add-btn" onclick="app.quickAddFixed(\'' + cat + '\')">+ Add</button>';
-                    }
-                    html += '</td>';
+                    html += '<td><button class="quick-add-btn" onclick="app.quickAddFixed(\'' + cat + '\')">+ Add</button></td>';
                     html += '</tr>';
                     
-                    // ✅ Inline add form (ONLY for non-Extra categories)
-                    if (!isExtraCategory) {
-                        html += '<tr id="add-' + cat.replace(/\s/g, '-') + '" class="inline-add-row" style="display:none;">';
-                        html += '<td colspan="6"><div style="display:flex;gap:10px;align-items:center;padding:10px;">';
-                        html += '<input type="date" id="date-' + cat.replace(/\s/g, '-') + '" style="width:150px;" value="' + new Date().toISOString().split('T')[0] + '">';
-                        html += '<input type="number" id="amt-' + cat.replace(/\s/g, '-') + '" placeholder="Amount" style="width:100px;">';
-                        
-                        // Find category info for subcategories
-                        let catInfo = null;
-                        for (let i = 0; i < this.categories.length; i++) {
-                            if (this.categories[i].name === cat) {
-                                catInfo = this.categories[i];
-                                break;
-                            }
+                    // Inline add form
+                    html += '<tr id="add-' + cat.replace(/\s/g, '-') + '" class="inline-add-row" style="display:none;">';
+                    html += '<td colspan="6"><div style="display:flex;gap:10px;align-items:center;padding:10px;">';
+                    html += '<input type="date" id="date-' + cat.replace(/\s/g, '-') + '" style="width:150px;" value="' + new Date().toISOString().split('T')[0] + '">';
+                    html += '<input type="number" id="amt-' + cat.replace(/\s/g, '-') + '" placeholder="Amount" style="width:100px;">';
+                    
+                    // Find category info for subcategories
+                    let catInfo = null;
+                    for (let i = 0; i < this.categories.length; i++) {
+                        if (this.categories[i].name === cat) {
+                            catInfo = this.categories[i];
+                            break;
                         }
-                        
-                        // Subcategory dropdown if available
-                        if (catInfo && catInfo.subcategories && catInfo.subcategories.length > 0) {
-                            html += '<select id="subcat-' + cat.replace(/\s/g, '-') + '" style="width:120px;">';
-                            html += '<option value="">-Subcategory-</option>';
-                            for (let i = 0; i < catInfo.subcategories.length; i++) {
-                                html += '<option value="' + catInfo.subcategories[i] + '">' + catInfo.subcategories[i] + '</option>';
-                            }
-                            html += '</select>';
-                        }
-                        
-                        html += '<input type="text" id="desc-' + cat.replace(/\s/g, '-') + '" placeholder="Description (optional)" style="width:200px;">';
-                        html += '<button class="btn btn-success btn-small" onclick="app.saveQuickFixed(\'' + cat + '\')">Save</button>';
-                        html += '<button class="btn btn-small" onclick="app.cancelQuickAdd(\'' + cat + '\')">Cancel</button>';
-                        html += '</div></td></tr>';
                     }
+                    
+                    // Subcategory dropdown if available
+                    if (catInfo && catInfo.subcategories && catInfo.subcategories.length > 0) {
+                        html += '<select id="subcat-' + cat.replace(/\s/g, '-') + '" style="width:120px;">';
+                        html += '<option value="">-Subcategory-</option>';
+                        for (let i = 0; i < catInfo.subcategories.length; i++) {
+                            html += '<option value="' + catInfo.subcategories[i] + '">' + catInfo.subcategories[i] + '</option>';
+                        }
+                        html += '</select>';
+                    }
+                    
+                    html += '<input type="text" id="desc-' + cat.replace(/\s/g, '-') + '" placeholder="Description (optional)" style="width:200px;">';
+                    html += '<button class="btn btn-success btn-small" onclick="app.saveQuickFixed(\'' + cat + '\')">Save</button>';
+                    html += '<button class="btn btn-small" onclick="app.cancelQuickAdd(\'' + cat + '\')">Cancel</button>';
+                    html += '</div></td></tr>';
                 }
-
+                
                 html += '<tr class="total-row"><td>Total</td><td>¥' + this.fmt(totalBudget) + '</td>';
                 html += '<td>¥' + this.fmt(totalActual) + '</td>';
                 html += '<td style="color:' + (totalBudget - totalActual >= 0 ? '#43e97b' : '#f5576c') + '">¥' + this.fmt(Math.abs(totalBudget - totalActual)) + '</td>';
                 html += '<td></td><td></td></tr>';
-
-                // Add new fixed expense category form (but exclude Extra/Variable from being added again)
+                
+                // Add new fixed expense category form
                 html += '<tr class="inline-add-row">';
-                html += '<td><input type="text" id="newFixedCatName" placeholder="New category name (not Extra/Variable)" style="width:150px;"></td>';
+                html += '<td><input type="text" id="newFixedCatName" placeholder="New category name" style="width:150px;"></td>';
                 html += '<td><input type="number" id="newFixedCatBudget" placeholder="Budget" style="width:100px;"></td>';
                 html += '<td colspan="3" style="color:#999;font-size:11px;">Set budget for new fixed expense category</td>';
                 html += '<td><button class="btn btn-success btn-small" onclick="app.addNewFixedCategory()">➕ Add Category</button></td>';
                 html += '</tr>';
-
+                
                 html += '</tbody></table></div></div>';
-
-                // Extra expenses (THIS IS WHERE THE ORIGINAL CODE CONTINUES)
-
                 
                 // Extra expenses
-                html += '<div class="section"><div class="section-title">➕ Extra/Variable Expenses';
-                html += '</div>';
+                html += '<div class="section"><div class="section-title">➕ Extra/Variable Expenses</div>';
+                html += '<div class="table-container"><table><thead><tr><th>Date</th><th>Amount</th><th>Description</th></tr></thead><tbody>';
                 
                 if (!d.extras || d.extras.length === 0) {
                     html += '<tr><td colspan="3" style="text-align:center;color:#999">No extra expenses yet</td></tr>';
