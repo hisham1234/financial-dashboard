@@ -2334,6 +2334,14 @@
                 html += '<div class="table-container"><table><thead><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Remaining</th><th>Details</th><th>Quick Add</th></tr></thead><tbody>';
                 
                 let totalBudget = 0, totalActual = 0;
+                // Add new category before the loop
+                if (!d.fixedExp['Extra/Variable Expense']) {
+                d.fixedExp['Extra/Variable Expense'] = {
+                    budget: 10000,
+                    actual: []
+                };
+                }
+
                 for (let cat in d.fixedExp) {
                     const catData = d.fixedExp[cat];
                     const budget = catData.budget;
