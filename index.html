@@ -2698,28 +2698,55 @@
                     d.transfers.forEach((t, idx) => {
                         const isOut = t.type === 'out';
                         const isIn = t.type === 'in';
-                        const otherAccount = isOut ? t.toAccount : t.fromAccount;
-                        const otherAccountName = otherAccount === 'yucho' ? 'Yucho' :
-                                                 otherAccount === 'slsenfin' ? 'SLSenfin' :
-                                                 otherAccount === 'rakuten' ? 'Rakuten' :
-                                                 otherAccount === 'medfun' ? '7-11 Account' :
-                                                 otherAccount === 'mizuho' ? 'Mizuho' :
-                                                 this.customAccounts.find(a => a.id === otherAccount)?.name || otherAccount;
+                        // ⭐ ADD THIS NEW LOGIC HERE ⭐
+                        const isInternalTransfer = (t.toAccount === 'yucho' && t.fromAccount === 'yucho');
                         
-                        let fundName = '-';
-                        const fundIdx = t.fundIdx;
-                        if (fundIdx !== null && fundIdx !== undefined && d.yucho && d.yucho.funds[fundIdx]) {
-                            fundName = d.yucho.funds[fundIdx].name;
-                        } else if (t.toFundName) {
-                            fundName = t.toFundName;
-                        } else if (t.fromFundName) {
-                            fundName = t.fromFundName;
+                        let otherAccountName;
+                        if (isInternalTransfer) {
+                            otherAccountName = '🔄 Internal Transfer';
+                        } else {
+                            const otherAccount = isOut ? t.toAccount : t.fromAccount;
+                            otherAccountName = otherAccount === 'yucho' ? 'Yucho' :
+                                            otherAccount === 'slsenfin' ? 'SLSenfin' :
+                                            otherAccount === 'rakuten' ? 'Rakuten' :
+                                            otherAccount === 'medfun' ? '7-11 Account' :
+                                            otherAccount === 'mizuho' ? 'Mizuho' :
+                                            this.customAccounts.find(a => a.id === otherAccount)?.name || otherAccount;
                         }
                         
+                       // ⭐ ADD THIS NEW FUND DISPLAY LOGIC ⭐
+                        let fundDisplay = '-';
+                        if (isInternalTransfer) {
+                            // Internal transfer - show both funds
+                            const currentFundIdx = t.fundIdx;
+                            const currentFundName = (currentFundIdx !== null && currentFundIdx !== undefined && d.yucho.funds[currentFundIdx]) 
+                                ? d.yucho.funds[currentFundIdx].name 
+                                : '?';
+                            
+                            if (isOut) {
+                                const toFundName = t.toFundName || '?';
+                                fundDisplay = currentFundName + ' → ' + toFundName;
+                            } else {
+                                const fromFundName = t.fromFundName || '?';
+                                fundDisplay = fromFundName + ' → ' + currentFundName;
+                            }
+                        } else {
+                            // Regular transfer - show current fund only
+                            const fundIdx = t.fundIdx;
+                            if (fundIdx !== null && fundIdx !== undefined && d.yucho.funds[fundIdx]) {
+                                fundDisplay = d.yucho.funds[fundIdx].name;
+                            } else if (t.toFundName) {
+                                fundDisplay = t.toFundName;
+                            } else if (t.fromFundName) {
+                                fundDisplay = t.fromFundName;
+                            }
+                        }
+                        // ⭐ END OF NEW LOGIC ⭐
+                                        
                         html += '<tr style="background:' + (isOut ? '#fff3cd' : '#d4edda') + ';">';
                         html += '<td>' + t.date + '</td>';
                         html += '<td>' + (isOut ? '🔴 Out' : '🟢 In') + '</td>';
-                        html += '<td>' + fundName + '</td>';
+                        html += '<td>' + fundDisplay + '</td>';
                         html += '<td>¥' + this.fmt(t.amount) + '</td>';
                         html += '<td>' + otherAccountName + '</td>';
                         html += '<td>' + (t.desc || '-') + '</td>';
@@ -3002,8 +3029,13 @@
                 }
                 
                 if (from === to) {
-                    this.msg('⚠️ Cannot transfer to same account', true);
-                    return;
+                    const fromFundVal = document.getElementById('transferFromFund').value;
+                    const toFundVal = document.getElementById('transferToFund').value;
+                    
+                    if (fromFundVal === toFundVal) {
+                        this.msg('⚠️ Cannot transfer to the same fund', true);
+                        return;
+                    }
                 }
                 
                 const date = new Date().toISOString().split('T')[0];
