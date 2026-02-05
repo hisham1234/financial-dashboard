@@ -2714,13 +2714,13 @@
                                             this.customAccounts.find(a => a.id === otherAccount)?.name || otherAccount;
                         }
                         
-                       // ⭐ ADD THIS NEW FUND DISPLAY LOGIC ⭐
+                       // ⭐ CORRECTED VERSION ⭐
                         let fundDisplay = '-';
                         if (isInternalTransfer) {
                             // Internal transfer - show both funds
                             const currentFundIdx = t.fundIdx;
-                            const currentFundName = (currentFundIdx !== null && currentFundIdx !== undefined && d.yucho.funds[currentFundIdx]) 
-                                ? d.yucho.funds[currentFundIdx].name 
+                            const currentFundName = (currentFundIdx !== null && currentFundIdx !== undefined && d.funds[currentFundIdx]) 
+                                ? d.funds[currentFundIdx].name 
                                 : '?';
                             
                             if (isOut) {
@@ -2733,8 +2733,8 @@
                         } else {
                             // Regular transfer - show current fund only
                             const fundIdx = t.fundIdx;
-                            if (fundIdx !== null && fundIdx !== undefined && d.yucho.funds[fundIdx]) {
-                                fundDisplay = d.yucho.funds[fundIdx].name;
+                            if (fundIdx !== null && fundIdx !== undefined && d.funds[fundIdx]) {  // ⭐ CHANGED d.yucho.funds to d.funds
+                                fundDisplay = d.funds[fundIdx].name;  // ⭐ CHANGED HERE TOO
                             } else if (t.toFundName) {
                                 fundDisplay = t.toFundName;
                             } else if (t.fromFundName) {
