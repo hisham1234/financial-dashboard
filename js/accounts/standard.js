@@ -43,6 +43,13 @@ export function renderStandardAccount(app, account) {
         });
     }
 
+    const totalIncome = d.income?.reduce((s, i) => s + i.amount, 0) || 0;
+    html += `<tr class="total-row">
+        <td colspan="2"><strong>Total Income</strong></td>
+        <td><strong>¥${app.fmt(totalIncome)}</strong></td>
+        <td colspan="2"></td>
+    </tr>`;
+
     html += `<tr class="inline-add-row">
         <td><input type="date" id="newStdIncDate" value="${new Date().toISOString().split('T')[0]}"></td>
         <td><input type="text" id="newStdIncSource" placeholder="Source" style="width:120px;"></td>
@@ -75,6 +82,13 @@ export function renderStandardAccount(app, account) {
             </tr>`;
         });
     }
+
+    const totalExpenses = d.expenses?.reduce((s, e) => s + e.amount, 0) || 0;
+    html += `<tr class="total-row">
+        <td><strong>Total Expenses</strong></td>
+        <td><strong>¥${app.fmt(totalExpenses)}</strong></td>
+        <td colspan="2"></td>
+    </tr>`;
 
     html += `<tr class="inline-add-row">
         <td><input type="date" id="newStdExpDate" value="${new Date().toISOString().split('T')[0]}"></td>
