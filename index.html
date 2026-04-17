@@ -1,1 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Advanced Financial Dashboard</title>
 
+    <!-- Google Drive scripts — callbacks wired in google-drive.js -->
+    <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+    <script src="https://apis.google.com/js/api.js"      async defer onload="gapiLoaded()"></script>
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="container">
+    <h1>💰 Advanced Financial Dashboard</h1>
+    <p class="subtitle">Complete Multi-Account Management with Transfer History</p>
+    <p style="text-align:center;font-size:11px;color:#7f8c8d;margin:-5px 0 10px 0;">
+        🌩️ <strong>Drive-First Mode:</strong> All data syncs to Google Drive instantly
+    </p>
+
+    <!-- ── Total assets banner ── -->
+    <div class="assets-banner">
+        <div class="assets-label">💎 TOTAL ASSETS ACROSS ALL ACCOUNTS</div>
+        <div>¥<span id="totalAssets">0</span></div>
+    </div>
+
+    <!-- ── Top controls ── -->
+    <div class="month-selector">
+        <label>🏦 Account:</label>
+        <select id="accountSelect" onchange="app.switchAccount()">
+            <option value="mizuho">Mizuho (Main Salary)</option>
+            <option value="yucho">Yucho (Investment Fund)</option>
+            <option value="slsenfin">SLSenfin Account</option>
+            <option value="rakuten">Rakuten Investment</option>
+            <option value="medfun">7-11 Account (Med &amp; Fun)</option>
+            <option value="overview">📊 All Accounts Overview</option>
+            <option value="monthly-savings">💰 Monthly Savings Report</option>
+            <option value="annual-savings">📈 Annual Savings Report</option>
+            <option value="expense-analysis">📉 Expense Analysis &amp; Insights</option>
+            <option value="total-expense-overview">💸 Total Expense Overview</option>
+        </select>
+
+        <label>📅 Month:</label>
+        <select id="monthSelect" onchange="app.switchMonth()"></select>
+
+        <button onclick="app.carryForward()">➡️ Next Month</button>
+        <button onclick="app.openTransferModal()">💸 Transfer</button>
+        <button onclick="app.openCategoriesModal()">🏷️ Categories</button>
+        <button onclick="app.openAccountsModal()">🏦 Accounts</button>
+
+        <button onclick="connectGoogleDrive()"    style="background:#4285f4;">🔗 Connect Drive</button>
+        <button onclick="refreshFromDrive()"      style="background:#34a853;">🔄 Refresh</button>
+        <button onclick="disconnectGoogleDrive()" style="background:#ea4335;color:white;">🔌 Disconnect</button>
+
+        <button onclick="app.exportData()">💾 Export</button>
+        <button onclick="document.getElementById('importFile').click()">📥 Import</button>
+        <input type="file" id="importFile" accept=".json"
+               style="display:none;" onchange="app.importData(event)">
+
+        <div class="sync-status">
+            <div class="sync-indicator"></div>
+            <span id="syncStatus">Local Storage</span>
+            <span id="driveStatus"  style="margin-left:10px;cursor:pointer;"
+                  onclick="showDriveStatus()">⚪ Not connected</span>
+            <span id="lastSyncTime" style="margin-left:10px;font-size:11px;color:#999;"></span>
+        </div>
+    </div>
+
+    <!-- ── Alert bar ── -->
+    <div id="alert" class="alert"></div>
+
+    <!-- ── Summary cards ── -->
+    <div class="summary-grid">
+        <div class="summary-card" onclick="app.switchToAccount('mizuho')">
+            <div class="summary-label">Mizuho Balance</div>
+            <div class="summary-value">¥<span id="mizuhoBalance">0</span></div>
+        </div>
+        <div class="summary-card" onclick="app.switchToAccount('yucho')">
+            <div class="summary-label">Yucho Balance</div>
+            <div class="summary-value">¥<span id="yuchoBalance">0</span></div>
+        </div>
+        <div class="summary-card" onclick="app.switchToAccount('slsenfin')">
+            <div class="summary-label">SLSenfin Balance</div>
+            <div class="summary-value">¥<span id="slsenfinBalance">0</span></div>
+        </div>
+        <div class="summary-card" onclick="app.switchToAccount('rakuten')">
+            <div class="summary-label">Rakuten Balance</div>
+            <div class="summary-value">¥<span id="rakutenBalance">0</span></div>
+        </div>
+        <div class="summary-card" onclick="app.switchToAccount('medfun')">
+            <div class="summary-label">7-11 Balance</div>
+            <div class="summary-value">¥<span id="medfunBalance">0</span></div>
+        </div>
+
+        <!-- Custom account cards injected here by JS -->
+        <div id="customAccountCards"></div>
+
+        <div class="summary-card"
+             style="background:linear-gradient(135deg,#f5576c 0%,#dc3b50 100%);"
+             onclick="app.showExpenseAnalysis()">
+            <div class="summary-label">Total Expense (Mizuho)</div>
+            <div class="summary-value">
+                ¥<span id="totalExpenses">0</span>
+                <span id="expenseRatio" style="font-size:14px;opacity:0.9;"></span>
+            </div>
+        </div>
+
+        <div class="summary-card"
+             style="background:linear-gradient(135deg,#ff6b6b 0%,#c92a2a 100%);"
+             onclick="app.showTotalExpenseOverview()">
+            <div class="summary-label">Total Expense (All Accounts)</div>
+            <div class="summary-value">¥<span id="totalExpensesAll">0</span></div>
+        </div>
+
+        <div class="summary-card"
+             style="background:linear-gradient(135deg,#43e97b 0%,#38c968 100%);"
+             onclick="app.showMonthlySavings()">
+            <div class="summary-label">Monthly Savings</div>
+            <div class="summary-value">
+                ¥<span id="monthlySavings">0</span>
+                <span id="savingsRate" style="font-size:14px;opacity:0.9;"></span>
+            </div>
+        </div>
+
+        <div class="summary-card"
+             style="background:linear-gradient(135deg,#ffd700 0%,#ffa500 100%);"
+             onclick="app.showAnnualSavings()">
+            <div class="summary-label">Annual Savings</div>
+            <div class="summary-value">¥<span id="annualSavings">0</span></div>
+        </div>
+
+        <div class="summary-card"
+             style="background:linear-gradient(135deg,#ff6b6b 0%,#c92a2a 100%);"
+             onclick="app.showAnnualExpenseOverview()">
+            <div class="summary-label">Annual Expenses (All Accounts)</div>
+            <div class="summary-value">¥<span id="annualExpensesAll">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── Dynamic content area ── -->
+    <div id="content"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODALS — static HTML shells; JS populates & toggles them
+     ════════════════════════════════════════════════════════════ -->
+
+<!-- Transfer modal -->
+<div id="transferModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="app.closeTransferModal()">&times;</span>
+        <div class="modal-header">💸 Transfer Between Accounts</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>From Account</label>
+                <select id="transferFrom" onchange="app.updateTransferFromOptions()">
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>From Fund</label>
+                <select id="transferFromFund">
+                    <option value="main">Main Balance</option>
+                </select>
+            </div>
+        </div>
+        <div style="text-align:center;font-size:24px;color:#667eea;margin:10px 0;">⬇️</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>To Account</label>
+                <select id="transferTo" onchange="app.updateTransferToOptions()">
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>To Fund</label>
+                <select id="transferToFund">
+                    <option value="main">Main Balance</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-grid" style="margin-top:20px;">
+            <div class="form-group">
+                <label>Amount (¥)</label>
+                <input type="number" id="transferAmount" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="transferDesc" placeholder="Optional">
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="app.confirmTransfer()"
+                style="margin-top:20px;width:100%;">✓ Confirm Transfer</button>
+    </div>
+</div>
+
+<!-- Categories modal -->
+<div id="categoriesModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="app.closeCategoriesModal()">&times;</span>
+        <div class="modal-header">🏷️ Category Management</div>
+
+        <div class="form-group">
+            <label>Add New Category</label>
+            <input type="text" id="newCategoryName" placeholder="Category name">
+
+            <label style="margin-top:10px;">Available for Accounts:</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="catForMizuho"   checked> Mizuho</label>
+                <label><input type="checkbox" id="catForYucho"    checked> Yucho</label>
+                <label><input type="checkbox" id="catForSlsenfin" checked> SLSenfin</label>
+                <label><input type="checkbox" id="catForRakuten"  checked> Rakuten</label>
+                <label><input type="checkbox" id="catForMedfun"   checked> Med &amp; Fun</label>
+            </div>
+
+            <label style="margin-top:10px;">Category Type:</label>
+            <select id="categoryType">
+                <option value="expense">Expense Category</option>
+                <option value="income">Income Category</option>
+            </select>
+
+            <button class="btn btn-success" onclick="app.addCategory()"
+                    style="margin-top:15px;">➕ Add Category</button>
+        </div>
+
+        <div style="margin-top:20px;">
+            <label>Filter Categories:</label>
+            <input type="text" class="category-filter" id="categoryFilter"
+                   onkeyup="app.filterCategories()" placeholder="Search categories...">
+        </div>
+
+        <div style="margin-top:20px;">
+            <h4 style="color:#667eea;margin-bottom:10px;">Existing Categories:</h4>
+            <div id="categoriesList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Accounts modal -->
+<div id="accountsModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="app.closeAccountsModal()">&times;</span>
+        <div class="modal-header">🏦 Account Management</div>
+
+        <div class="form-group">
+            <label>Add New Custom Account</label>
+            <input type="text" id="newAccountName"
+                   placeholder="Account name (e.g., PayPay, LINE Pay)">
+            <input type="text" id="newAccountId"
+                   placeholder="Account ID (lowercase, no spaces, e.g., paypay)"
+                   style="margin-top:10px;">
+            <p style="font-size:12px;color:#666;margin-top:5px;">
+                💡 Use lowercase letters only, no spaces
+            </p>
+            <button class="btn btn-success" onclick="app.addCustomAccount()"
+                    style="margin-top:15px;">➕ Add Account</button>
+        </div>
+
+        <div style="margin-top:30px;">
+            <h4 style="color:#667eea;margin-bottom:10px;">Default Accounts:</h4>
+            <div class="category-item">
+                <div class="category-name">💰 Mizuho (Main Salary)</div>
+                <span style="font-size:12px;color:#999;">Built-in account with fixed expenses tracking</span>
+            </div>
+            <div class="category-item">
+                <div class="category-name">🏦 Yucho (Investment Fund)</div>
+                <span style="font-size:12px;color:#999;">Built-in account with multiple funds</span>
+            </div>
+            <div class="category-item">
+                <div class="category-name">🌐 SLSenfin Account</div>
+                <span style="font-size:12px;color:#999;">Built-in standard account</span>
+            </div>
+            <div class="category-item">
+                <div class="category-name">📈 Rakuten Investment</div>
+                <span style="font-size:12px;color:#999;">Built-in standard account</span>
+            </div>
+            <div class="category-item">
+                <div class="category-name">🏪 7-11 Account (Med &amp; Fun)</div>
+                <span style="font-size:12px;color:#999;">Built-in standard account</span>
+            </div>
+        </div>
+
+        <div style="margin-top:30px;" id="customAccountsList">
+            <h4 style="color:#667eea;margin-bottom:10px;">Custom Accounts:</h4>
+        </div>
+    </div>
+</div>
+
+<!-- Edit transfer fund modal -->
+<div id="editTransferFundModal" class="modal">
+    <div class="modal-content" style="max-width:400px;">
+        <span class="close" onclick="app.closeEditTransferFundModal()">&times;</span>
+        <div class="modal-header">✏️ Edit Transfer Fund</div>
+        <div class="form-group">
+            <label>Select Destination Fund:</label>
+            <select id="editTransferFundSelect" style="width:100%;padding:10px;">
+                <option value="">-- Select Fund --</option>
+            </select>
+        </div>
+        <button class="btn btn-success" onclick="app.saveTransferFundEdit()"
+                style="margin-top:15px;width:100%;">✅ Save</button>
+    </div>
+</div>
+
+<!-- App entry point — type="module" enables ES imports -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
