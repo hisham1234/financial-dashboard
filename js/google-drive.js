@@ -420,5 +420,3 @@ export function showDriveStatus() {
     alert('Drive Status:\n\n' + Object.entries(status).map(([k, v]) => `${k}: ${v}`).join('\n'));
 }
 
-window.gapiLoaded = gapiLoaded;
-window.gisLoaded = gisLoaded;

@@ -625,3 +625,7 @@ window.showDriveStatus       = showDriveStatus;
 
 // ── Boot ─────────────────────────────────────────────────────
 app.init();
+
+// ── Manually init Google APIs after module is ready ──────────
+if (typeof gapi !== 'undefined') gapiLoaded();
+if (typeof google !== 'undefined') gisLoaded();
