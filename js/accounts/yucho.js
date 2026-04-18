@@ -67,6 +67,13 @@ export function renderYucho(app) {
         });
     }
 
+    const totalDeposits = d.additions?.reduce((s, a) => s + a.amount, 0) || 0;
+    html += `<tr class="total-row">
+        <td colspan="2"><strong>Total Deposits</strong></td>
+        <td><strong>¥${app.fmt(totalDeposits)}</strong></td>
+        <td colspan="2"></td>
+    </tr>`;
+
     html += `<tr class="inline-add-row">
         <td><input type="date" id="yuchoDepDate" value="${new Date().toISOString().split('T')[0]}"></td>
         <td><select id="yuchoDepFund">${d.funds.map((f,i) => `<option value="${i}">${f.name}</option>`).join('')}</select></td>
@@ -99,6 +106,13 @@ export function renderYucho(app) {
             </tr>`;
         });
     }
+
+    const totalFundExpenses = d.expenses?.reduce((s, e) => s + e.amount, 0) || 0;
+    html += `<tr class="total-row">
+        <td colspan="2"><strong>Total Expenses</strong></td>
+        <td><strong>¥${app.fmt(totalFundExpenses)}</strong></td>
+        <td colspan="2"></td>
+    </tr>`;
 
     html += `<tr class="inline-add-row">
         <td><input type="date" id="yuchoExpDate" value="${new Date().toISOString().split('T')[0]}"></td>
