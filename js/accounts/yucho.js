@@ -10,7 +10,7 @@ export function renderYucho(app) {
     html += '<div class="section"><div class="section-title">📊 Yucho Investment Funds</div>';
     html += `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#666;cursor:pointer;">
-            <input type="checkbox" ${app.hideZeroYuchoFunds ? 'checked' : ''} onchange="app.toggleHideZeroYuchoFunds(this.checked)">
+            <input type="checkbox" ${app.hideZeroYuchoFunds ? 'checked' : ''} onchange="app.setHideZeroYuchoFunds(this.checked)">
             Hide funds with zero balance
         </label>
     </div>`;

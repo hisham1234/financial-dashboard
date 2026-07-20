@@ -303,7 +303,7 @@ const app = {
         this.render();
     },
 
-    toggleHideZeroYuchoFunds(value) {
+    setHideZeroYuchoFunds(value) {
         this.hideZeroYuchoFunds = Boolean(value);
         this.render();
     },
@@ -555,7 +555,7 @@ const app = {
     confirmDeleteCategory(c)       { confirmDeleteCategory(this, c); },
 
     // Yucho
-    toggleHideZeroYuchoFunds(v)    { this.toggleHideZeroYuchoFunds(v); },
+    setHideZeroYuchoFunds(v)       { this.setHideZeroYuchoFunds(v); },
     addYuchoDeposit()              { addYuchoDeposit(this); },
     deleteYuchoDepositItem(i)      { deleteYuchoDepositItem(this, i); },
     editYuchoDepositField(el,i,f,v){ editYuchoDepositField(this, el, i, f, v); },
