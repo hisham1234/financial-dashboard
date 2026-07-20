@@ -7,11 +7,13 @@ export function renderYucho(app) {
     let html = '';
 
     // ── Funds table ──
-    html += '<div class="section"><div class="section-title">📊 Yucho Investment Funds</div>';
-    html += `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#666;cursor:pointer;">
+    html += '<div class="section">';
+    html += `<div class="section-header">
+        <div class="section-title">📊 Yucho Investment Funds</div>
+        <label class="filter-toggle">
             <input type="checkbox" ${app.hideZeroYuchoFunds ? 'checked' : ''} onchange="app.setHideZeroYuchoFunds(this.checked)">
-            Hide funds with zero balance
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Hide zero-balance funds</span>
         </label>
     </div>`;
     html += '<div class="table-container"><table><thead><tr><th>Fund</th><th>Initial</th><th>Additions</th><th>Expenses</th><th>Transfers</th><th>Current</th><th>Actions</th></tr></thead><tbody>';
