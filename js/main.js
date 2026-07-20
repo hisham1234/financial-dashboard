@@ -88,6 +88,7 @@ const app = {
     customAccounts: [],
     month: '2025-11',
     acc: 'mizuho',
+    hideZeroYuchoFunds: false,
 
     // ── internal edit-lock ────────────────────────────────────
     _editingCell: null,
@@ -299,6 +300,11 @@ const app = {
             this.validateMonthStructure(this.month);
         }
         this.updateTotalAssets();
+        this.render();
+    },
+
+    toggleHideZeroYuchoFunds(value) {
+        this.hideZeroYuchoFunds = Boolean(value);
         this.render();
     },
 
@@ -549,6 +555,7 @@ const app = {
     confirmDeleteCategory(c)       { confirmDeleteCategory(this, c); },
 
     // Yucho
+    toggleHideZeroYuchoFunds(v)    { this.toggleHideZeroYuchoFunds(v); },
     addYuchoDeposit()              { addYuchoDeposit(this); },
     deleteYuchoDepositItem(i)      { deleteYuchoDepositItem(this, i); },
     editYuchoDepositField(el,i,f,v){ editYuchoDepositField(this, el, i, f, v); },

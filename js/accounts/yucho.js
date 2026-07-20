@@ -8,9 +8,16 @@ export function renderYucho(app) {
 
     // ── Funds table ──
     html += '<div class="section"><div class="section-title">📊 Yucho Investment Funds</div>';
+    html += `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#666;cursor:pointer;">
+            <input type="checkbox" ${app.hideZeroYuchoFunds ? 'checked' : ''} onchange="app.toggleHideZeroYuchoFunds(this.checked)">
+            Hide funds with zero balance
+        </label>
+    </div>`;
     html += '<div class="table-container"><table><thead><tr><th>Fund</th><th>Initial</th><th>Additions</th><th>Expenses</th><th>Transfers</th><th>Current</th><th>Actions</th></tr></thead><tbody>';
 
     let grandTotal = 0;
+    let visibleCount = 0;
     d.funds.forEach((f, i) => {
         let add = 0, exp = 0, tOut = 0, tIn = 0;
         d.additions?.forEach(a => { if (a.fundIdx === i) add += a.amount; });
@@ -22,7 +29,11 @@ export function renderYucho(app) {
         });
         const net     = tIn - tOut;
         const current = f.balance + add - exp + net;
-        grandTotal   += current;
+
+        if (app.hideZeroYuchoFunds && current === 0) return;
+
+        visibleCount++;
+        grandTotal += current;
 
         html += `<tr>
             <td><strong>
@@ -36,6 +47,10 @@ export function renderYucho(app) {
             <td><button class="btn btn-delete btn-small" onclick="app.deleteFund(${i})">🗑️</button></td>
         </tr>`;
     });
+
+    if (!visibleCount) {
+        html += '<tr><td colspan="7" style="text-align:center;color:#999;">No funds to display</td></tr>';
+    }
 
     html += `<tr class="total-row"><td colspan="5">Total Balance</td><td>¥${app.fmt(grandTotal)}</td><td></td></tr>`;
     html += `<tr class="inline-add-row">
